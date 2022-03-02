@@ -1,22 +1,15 @@
 /*
-	Function: parse_input(char *buffer);
-	Usage: char * args[] = parse_command(&buffer);
+	Function: main_shell(char * buffer, char ** args);
+	Usage: main_shell(char * buffer, char ** args);
 	---------------------------
-	Parse the user input into separate arguments
- */
+	main shell interface that reads user input into buffer and parse the string by white spaces
+	and store the argument list into args
+*/
 
-// void buffer_to_args(&buffer, &args);
+// void main_shell(char * buffer, size_t bufsize, char ** args);
 
-/*
-	Function: ls();
-	---------------------------
-	Prints all the 
- */
+int main_shell(char * buffer, char ** args);
 
+bool check_if_valid_command(char * command, char ** valid_commands);
 
-// find the right matching command from the string and run it
-void find_command();
-
-void ls(char ** args);
-
-
+int execute(char ** args, char ** valid_commands);

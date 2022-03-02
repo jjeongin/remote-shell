@@ -9,9 +9,17 @@
 // L commands that can be used with I/O redirecting -- echo, cat, grep
 // L pipes
 
+// -- UPDATE 03/02 --
+// Implemented commands using exec : ls, clear, pwd, mkdir, cat, echo, find, mv
+// Implemented commands with extra methods : cd (new)
+// TO DO : rm
+//         I/O redirection
+//         pipes
+
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
@@ -21,34 +29,17 @@
 #define MAX_BUF 500 // max buffer size (https://www.geeksforgeeks.org/making-linux-shell-c/)
 #define MAX_ARGS 100 // max number of arguments
 #define MAX_ARG_LEN 50 // max length of one argument
-
-void main_shell(char * buffer, char ** args) {
-	size_t bufsize = MAX_BUF;
-	int arg_len = 0; // number of arguments
-
-	while (arg_len <= 0) { // prevent segmentation fault when arg[0] == NULL
-		printf("> ");
-		getline(&buffer, &bufsize, stdin);
-		buffer[strcspn(buffer, "\n")] = 0; // remove new line character at the end (https://stackoverflow.com/questions/2693776/removing-trailing-newline-character-from-fgets-input)
-		printf("Buffer : \"%s\"\n", buffer);
-
-		args[arg_len] = strtok(buffer, " "); // first argument
-		printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
-		while (args[arg_len] != NULL) {
-			arg_len++;
-			args[arg_len] = strtok(NULL, " ");
-			printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
-		}
-		printf("Arg length : %d.\n", arg_len);
-	}
-}
+#define COMMANDS 10
 
 int main(void) {
-	// --STATIC MEMORY--
-	char buffer[MAX_BUF];
-	char * args[MAX_ARGS];
+	// --STATIC ALLOCATION--
+	char buffer[MAX_BUF]; // string to store the user input
+	char * args[MAX_ARGS]; // list of string to store the arguments
+	int arg_len;
+	char * valid_commands[COMMANDS] = {"ls", "pwd", "clear", "mkdir", "rm", "cd", "cat", "find", "echo", "mv"}; // list of supported commands
+	// char * exec_commands[] = 
 
-	// --DYNAMIC MEMORY--
+	// --DYNAMIC ALLOCATION--
 	// char * buffer; // allocate memory for buffer
 	// size_t bufsize = MAX_BUF;
 	// buffer = (char *) malloc(bufsize * sizeof(char));
@@ -69,23 +60,12 @@ int main(void) {
 	printf("---Welcome to the shell---\n");
 
 	while(1) { // repeat while
-		main_shell(buffer, args); // main shell
+		// buffer = get_input();
+		arg_len = main_shell(buffer, args);
 		if (strcmp(args[0], "exit") == 0 || strcmp(args[0], "quit") == 0)
 			return 0;
 
-		pid_t pid = fork();
-		if (pid < 0) { // fork error
-			perror("Failed to Fork.\n");
-			return 1;
-		}
-		else if (pid == 0) { // child
-			printf("Child 1\n");
-			// execute command
-			exit(0);
-		}
-
-		wait(NULL);
-		printf("Parent\n");
+		execute(args, valid_commands);
 	}
 	// --DYNAMIC MEMORY--
 	// free(buffer);
