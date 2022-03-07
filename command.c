@@ -25,8 +25,9 @@ void get_user_input(char * buffer, size_t bufsize) {
 	printf("Buffer : \"%s\"\n", buffer);
 }
 
-int get_argument_list(char * buffer, char ** args, int arg_len) {
+int get_argument_list(char * buffer, char ** args) {
 	char * delim = "\t\r\n ";
+	int arg_len = 0;
 
 	args[arg_len] = strtok(buffer, delim); // first argument
 	// TEST
@@ -43,59 +44,6 @@ int get_argument_list(char * buffer, char ** args, int arg_len) {
 	return arg_len;
 }
 
-// int main_shell(char * buffer, char ** args) { // main shell interface
-// 	size_t bufsize = MAX_BUF;
-// 	int arg_len = 0; // number of arguments
-// 	char * delim = "\t\r\n ";
-
-// 	while (arg_len <= 0) { // repeat until user enter at least one argument
-// 		char * cwd = getcwd(NULL, 0); // current working directory
-// 		printf("%s $ ", cwd);
-// 		get_user_input(&buffer);
-// 		printf("Buffer : \"%s\"\n", buffer);
-
-// 		// char * composed = "<>|";
-// 		// char * found;
-// 		// if (found = strpbrk(buffer, composed) != NULL) {
-			
-// 		// }
-
-// 		// char * input_redirect_sign = strchr(buffer, '<');
-// 		// char * output_redirect_sign = strchr(buffer, '>');
-// 		// if (input_redirect_sign != NULL) {
-// 		// 	size_t redirect_index = input_redirect_sign - buffer;
-// 		// 	char * filename = input_redirect_sign + 1;
-// 		// 	printf("Filename : \"%s\"\n", filename);
-
-// 		// 	char * new_buffer = malloc(redirect_index * sizeof(char) + 1);
-// 		// 	strncpy(new_buffer, buffer, redirect_index);
-// 		// 	strcpy(buffer, new_buffer);
-// 		// 	printf("New buf : \"%s\"\n", buffer);
-// 		// }
-// 		// else if (output_redirect_sign != NULL) {
-// 		// 	char * new_buffer = output_redirect_sign + 1;
-// 		// 	strcpy(buffer, new_buffer);
-// 		// 	printf("New buf : \"%s\"\n", buffer);
-
-// 		// 	size_t redirect_index = output_redirect_sign - buffer;
-// 		// 	char * filename = malloc(redirect_index * sizeof(char) + 1);
-// 		// 	strncpy(filename, buffer, redirect_index);
-// 		// 	printf("Filename : \"%s\"\n", filename);
-// 		// }
-
-
-// 		// args[arg_len] = strtok(buffer, delim); // first argument
-// 		// printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
-// 		// while (args[arg_len] != NULL) {
-// 		// 	arg_len++;
-// 		// 	args[arg_len] = strtok(NULL, delim);
-// 		// 	printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
-// 		// }
-// 		// printf("Arg length : %d.\n", arg_len);
-// 	}
-// 	return arg_len;
-// }
-
 bool check_if_valid_command(char * command, char ** valid_commands) { // check if the command is in valid command list
 	for (int i = 0; i < COMMANDS; i++) {
         if (strcmp(command, valid_commands[i]) == 0) {
@@ -108,6 +56,8 @@ bool check_if_valid_command(char * command, char ** valid_commands) { // check i
 int redirect_input(char * filename) {
 	int default_fd = dup(STDIN_FILENO);
 	int temp_fd = open(filename, O_RDONLY);
+	if (temp_fd < 0) // error checking needed : check if filename exists
+		// error
 	dup2(temp_fd, STDIN_FILENO);
 	close(temp_fd);
 	return default_fd;
@@ -119,6 +69,35 @@ int redirect_output(char * filename) {
 	dup2(temp_fd, STDOUT_FILENO);
 	close(temp_fd);
 	return default_fd;
+}
+
+char * check_if_io_redirection(char * buffer, size_t bufsize, bool redirect_input_found, bool redirect_output_found) {
+	char * filename;
+	char * redirect_input_sign = strchr(buffer, "<");
+	char * redirect_output_sign = strchr(buffer, ">");
+	char * delim = "\t\r\n ";
+	int pos = 0;
+
+	if (redirect_input_sign != NULL) {
+		redirect_input_found = true;
+		filename = buffer[redirect_input_sign+1]; // redirect input to the filename
+		filename = strtok(filename, delim); // remove white space in filename
+		int pos = redirect_input_sign - buffer;
+	}
+	else if (redirect_output_sign != NULL) {
+		redirect_output_found = true;
+		filename = buffer[redirect_output_sign+1]; // redirect input to the filename
+		filename = strtok(filename, delim);// remove white space in filename
+		int pos = redirect_output_sign - buffer;
+	}
+
+	if (pos > 0) {
+		for (int i = pos; i < bufsize; i++) { // remove the redirect sign and filename from the back of the buffer
+			buffer[i] = '\0';
+		}
+	}
+
+	return filename;
 }
 
 // bool check_if_redirect_io(char ** args, int arg_len) {

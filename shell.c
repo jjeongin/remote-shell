@@ -63,44 +63,68 @@ int main(void) {
 	while(1) { // repeat while the command is not exit or quit
 		arg_len = 0; // number of arguments
 
+		// shell interface
 		char * cwd = getcwd(NULL, 0); // print current working directory
 		printf("%s $ ", cwd);
+
+		// get user input and store it in argument list
 		get_user_input(buffer, bufsize);
-		arg_len = get_argument_list(buffer, args, arg_len);
+
+		// handle input/output redirection
+		bool redirect_input_found = false;
+		bool redirect_output_found = false;
+		int default_fd;
+		// TO DO - Currently implementing check_if_io_redirection() function
+		char * filename = check_if_io_redirection(buffer, bufsize, redirect_input_found, redirect_output_found); // check if there is input/output redirection, if there is, return the redirect sign & filename and update buffer (parse the input string)
+		if (redirect_input_found == true && filename != NULL) { // if input_sign found, redirect input & return the default_fd 
+			default_fd = redirect_input(filename);
+		}
+		else if (redirect_output_found == true && filename != NULL) { // else if output_sign found, redirect output & return the default_fd 
+			default_fd = redirect_output(filename);
+		}
+
+		// TO DO - check if pipe sign ("|") in the string
+		// check if pipe and return the number of the pipe detected
+		// if there is at least one pipe, divide the input into multiple string
+		// loop through each string, divide each into args list, and execute each
+
+		arg_len = get_argument_list(buffer, args); // divide user input into argument list 
 
 		if (strcmp(args[0], "exit") == 0 || strcmp(args[0], "quit") == 0) // end the program if the command is exit or quit
 			return 0;
 
 		if (check_if_valid_command(args[0], valid_commands) == false) { // error if the command is not in valid command list
-			printf("Invalid command: %s\n", args[0]);
+			printf("Invalid command : \"%s\"\n", args[0]);
 		}
-		else {
-			// check if there is input/output redirection
-			bool redirect_input_found = false;
-			bool redirect_output_found = false;
-			int default_fd = 0;
-			int i = 0;
-			while (args[i] != NULL) {
-				if (strcmp(args[i], "<") == 0) {
-					redirect_input_found = true;
-					filename = args[i+1]; // redirect input to the filename
-					default_fd = redirect_input(filename);
-					arg_len -= 2; // remove "<" and "filename" from the args list
-				}
-				else if (strcmp(args[i], ">") == 0) {
-					redirect_output_found = true;
-					filename = args[i+1]; // redirect input to the filename
-					default_fd = redirect_output(filename);
-					arg_len -= 2; // remove "<" and "filename" from the args list
-				}
+		else { // else, execute the program
+			// ----- check if there is input/output redirection ----- We can check this in the buffer level !
+			// bool redirect_input_found = false;
+			// bool redirect_output_found = false;
+			// int default_fd = 0;
+			// int i = 0;
+			// while (args[i] != NULL) {
+			// 	if (strcmp(args[i], "<") == 0) {
+			// 		redirect_input_found = true;
+			// 		filename = args[i+1]; // redirect input to the filename
+			// 		default_fd = redirect_input(filename);
+			// 		arg_len -= 2; // remove "<" and "filename" from the args list
+			// 	}
+			// 	else if (strcmp(args[i], ">") == 0) {
+			// 		redirect_output_found = true;
+			// 		filename = args[i+1]; // redirect input to the filename
+			// 		default_fd = redirect_output(filename);
+			// 		arg_len -= 2; // remove "<" and "filename" from the args list
+			// 	}
 
-				if (redirect_input_found || redirect_output_found) // move the elements behind to the front
-					args[i] = args[i+2];
+			// 	if (redirect_input_found || redirect_output_found) // move the elements behind to the front
+			// 		args[i] = args[i+2];
 
-				i++;
-			}
+			// 	i++;
+			// }
+			// -------------------------------------------------------
 
-			// execute arguments in the args list
+
+			// execute arguments in the args list - FOR PIPE : Maybe we can loop this line if there is multiple arguments that needs to be executed
 			execute(args);
 
 			// restore default stdin and stdout
