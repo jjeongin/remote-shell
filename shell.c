@@ -10,9 +10,9 @@
 // L pipes
 
 // -- UPDATE 03/02 --
-// Implemented commands using exec : ls, clear, pwd, mkdir, cat, echo, find, mv
+// Implemented commands using exec : ls, clear, pwd, mkdir, cat, echo, find, mv, rm
 // Implemented commands with extra methods : cd (new)
-// TO DO : rm
+// TO DO :
 //         I/O redirection
 //         pipes
 
@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
+#include <fcntl.h>
 
 #include "command.h"
 #define MAX_BUF 500 // max buffer size (https://www.geeksforgeeks.org/making-linux-shell-c/)
@@ -33,42 +34,89 @@
 
 int main(void) {
 	// --STATIC ALLOCATION--
-	char buffer[MAX_BUF]; // string to store the user input
-	char * args[MAX_ARGS]; // list of string to store the arguments
+	// char buffer[MAX_BUF]; // string to store the user input
+	// char * args[MAX_ARGS]; // list of string to store the arguments
 	int arg_len;
 	char * valid_commands[COMMANDS] = {"ls", "pwd", "clear", "mkdir", "rm", "cd", "cat", "find", "echo", "mv"}; // list of supported commands
-	// char * exec_commands[] = 
+	char * filename;
 
 	// --DYNAMIC ALLOCATION--
-	// char * buffer; // allocate memory for buffer
-	// size_t bufsize = MAX_BUF;
-	// buffer = (char *) malloc(bufsize * sizeof(char));
-	// if (buffer == NULL) {
-	// 	perror("Failed to allocate buffer.\n");
-	// 	exit(1);
-	// }
+	char * buffer; // allocate memory for buffer
+	size_t bufsize = MAX_BUF;
+	buffer = (char *) malloc(bufsize * sizeof(char));
+	if (buffer == NULL) {
+		perror("Failed to allocate buffer.\n");
+		exit(1);
+	}
 
-	// char ** args = (char **) malloc(MAX_ARGS * sizeof(char*)); // allocate memory for argument list (https://stackoverflow.com/questions/5935933/dynamically-create-an-array-of-strings-with-malloc)
-	// for (int i = 0; i < MAX_ARGS; i++)
- 	//	args[i] = malloc((MAX_ARG_LEN+1) * sizeof(char));
+	char ** args = (char **) malloc(MAX_ARGS * sizeof(char*)); // allocate memory for argument list (https://stackoverflow.com/questions/5935933/dynamically-create-an-array-of-strings-with-malloc)
+	for (int i = 0; i < MAX_ARGS; i++) {
+		args[i] = malloc((MAX_ARG_LEN+1) * sizeof(char));
 
- 	//	if(args == NULL) {
-	// 	perror("Failed to allocate argument list.\n");
-	// 	exit(1);
-	// }
+ 		if(args == NULL) {
+			perror("Failed to allocate argument list.\n");
+			exit(1);
+		}
+	}
 
 	printf("---Welcome to the shell---\n");
+	while(1) { // repeat while the command is not exit or quit
+		arg_len = 0; // number of arguments
 
-	while(1) { // repeat while
-		// buffer = get_input();
-		arg_len = main_shell(buffer, args);
-		if (strcmp(args[0], "exit") == 0 || strcmp(args[0], "quit") == 0)
+		char * cwd = getcwd(NULL, 0); // print current working directory
+		printf("%s $ ", cwd);
+		get_user_input(buffer, bufsize);
+		arg_len = get_argument_list(buffer, args, arg_len);
+
+		if (strcmp(args[0], "exit") == 0 || strcmp(args[0], "quit") == 0) // end the program if the command is exit or quit
 			return 0;
 
-		execute(args, valid_commands);
+		if (check_if_valid_command(args[0], valid_commands) == false) { // error if the command is not in valid command list
+			printf("Invalid command: %s\n", args[0]);
+		}
+		else {
+			// check if there is input/output redirection
+			bool redirect_input_found = false;
+			bool redirect_output_found = false;
+			int default_fd = 0;
+			int i = 0;
+			while (args[i] != NULL) {
+				if (strcmp(args[i], "<") == 0) {
+					redirect_input_found = true;
+					filename = args[i+1]; // redirect input to the filename
+					default_fd = redirect_input(filename);
+					arg_len -= 2; // remove "<" and "filename" from the args list
+				}
+				else if (strcmp(args[i], ">") == 0) {
+					redirect_output_found = true;
+					filename = args[i+1]; // redirect input to the filename
+					default_fd = redirect_output(filename);
+					arg_len -= 2; // remove "<" and "filename" from the args list
+				}
+
+				if (redirect_input_found || redirect_output_found) // move the elements behind to the front
+					args[i] = args[i+2];
+
+				i++;
+			}
+
+			// execute arguments in the args list
+			execute(args);
+
+			// restore default stdin and stdout
+			if (redirect_input_found == true) {
+				dup2(default_fd, STDIN_FILENO);
+				close(default_fd);
+			}
+			if (redirect_output_found == true) {
+				dup2(default_fd, STDOUT_FILENO);
+				close(default_fd);
+			}
+		}
 	}
+
 	// --DYNAMIC MEMORY--
-	// free(buffer);
-	// free(args);
+	free(buffer);
+	free(args);
 	return 0;
 }
