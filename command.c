@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
+#include <fcntl.h>
 
 #include "command.h"
 #define MAX_BUF 500 // max buffer size (https://www.geeksforgeeks.org/making-linux-shell-c/)
@@ -17,27 +18,29 @@
 #define MAX_ARG_LEN 50 // max length of one argument
 #define COMMANDS 10
 
-int main_shell(char * buffer, char ** args) { // main shell interface
-	size_t bufsize = MAX_BUF;
-	int arg_len = 0; // number of arguments
+void get_user_input(char * buffer, size_t bufsize) {
+	getline(&buffer, &bufsize, stdin);
+	buffer[strcspn(buffer, "\n")] = 0; // remove new line character at the end (https://stackoverflow.com/questions/2693776/removing-trailing-newline-character-from-fgets-input)
+	// TEST
+	// printf("Buffer : \"%s\"\n", buffer);
+}
+
+int get_argument_list(char * buffer, char ** args) {
 	char * delim = "\t\r\n ";
+	int arg_len = 0;
 
-	while (arg_len <= 0) { // repeat until user enter at least one argument
-		char * cwd = getcwd(NULL, 0); // current working directory
-		printf("%s > ", cwd);
-		getline(&buffer, &bufsize, stdin);
-		buffer[strcspn(buffer, "\n")] = 0; // remove new line character at the end (https://stackoverflow.com/questions/2693776/removing-trailing-newline-character-from-fgets-input)
-		printf("Buffer : \"%s\"\n", buffer);
-
-		args[arg_len] = strtok(buffer, delim); // first argument
-		printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
-		while (args[arg_len] != NULL) {
-			arg_len++;
-			args[arg_len] = strtok(NULL, delim);
-			printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
-		}
-		printf("Arg length : %d.\n", arg_len);
+	args[arg_len] = strtok(buffer, delim); // first argument
+	// TEST
+	// printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
+	while (args[arg_len] != NULL) {
+		arg_len++;
+		args[arg_len] = strtok(NULL, delim);
+		// TEST
+		// printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
 	}
+	// TEST
+	// printf("Arg length : %d.\n", arg_len);
+
 	return arg_len;
 }
 
@@ -50,20 +53,69 @@ bool check_if_valid_command(char * command, char ** valid_commands) { // check i
     return false;
 }
 
-int execute(char ** args, char ** valid_commands) { // execute the command
-	int status;
+int redirect_input(char * filename) {
+	int default_fd = dup(STDIN_FILENO);
+	int temp_fd = open(filename, O_RDONLY);
+	if (temp_fd < 0) { // exit with error if filename not found
+		printf("Failed to open file with filename : \"%s\"\n", filename);
+		exit(1);
+	}
+	dup2(temp_fd, STDIN_FILENO);
+	close(temp_fd);
+	return default_fd;
+}
 
-	if (check_if_valid_command(args[0], valid_commands) == false) { // if the command is not in valid command list
-		printf("Invalid command: %s\n", args[0]); // print error and return
-		return 1;
+int redirect_output(char * filename) {
+	int default_fd = dup(STDOUT_FILENO);
+	int temp_fd = open(filename, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IRGRP | S_IWGRP | S_IWUSR);
+	if (temp_fd < 0) { // exit with error if filename not found
+		printf("Failed to open file with filename : \"%s\"\n", filename);
+		exit(1);
+	}
+	dup2(temp_fd, STDOUT_FILENO);
+	close(temp_fd);
+	return default_fd;
+}
+
+char * check_if_io_redirection(char * buffer, bool * redirect_input_found, bool * redirect_output_found) {
+	char * redirect_input_sign = strstr(buffer, "<");
+	char * redirect_output_sign = strstr(buffer, ">");
+	char * filename = (char *) malloc((MAX_ARG_LEN+1) * sizeof(char));
+	char * delim = "\t\r\n ";
+	int pos = 0;
+
+	if (redirect_input_sign != NULL) { // if input redirection sign is found
+		*redirect_input_found = true; // set signal to true
+		strcpy(filename, redirect_input_sign + 1); // copy the filename
+		filename = strtok(filename, delim); // remove any whitespace from the filename
+		pos = redirect_input_sign - buffer; // position (index) of the redirection sign
+	}
+	else if (redirect_output_sign != NULL) { // if output redirection sign is found
+		*redirect_output_found = true;
+		strcpy(filename, redirect_output_sign + 1);
+		filename = strtok(filename, delim);
+		pos = redirect_output_sign - buffer; // position (index) of the redirection sign
 	}
 
-	if (strcmp(args[0], "cd") == 0) { // run change directory
+
+	if (pos > 0) { // if any sign is found
+		for (int i = strlen(buffer)-1; i >= pos; i--) { // remove the redirect sign and filename from the back of the buffer
+			buffer[i] = '\0';
+		}
+	}
+
+	return filename;
+}
+
+int execute(char ** args) { // execute the command
+	int status;
+
+	if (strcmp(args[0], "cd") == 0) { // if cd, execute chdir()
 		if (chdir(args[1]) != 0) {
 			printf("cd failed to %s\n", args[1]);
 		}
 	}
-	else { // for other commands that can be executed using exec()
+	else {
 		pid_t pid = fork();
 	    if (pid < 0) // proccess failed
 	    {
@@ -81,18 +133,7 @@ int execute(char ** args, char ** valid_commands) { // execute the command
 	    else { // parent
 	    	waitpid(pid, &status, 0);
 	    }
-	}
+	}	
 
     return 0;
 }
-
-// Should we separate extra commands ?
-// int remove_file() {
-
-// }
-
-// int change_directory(char ** args) {
-// 	if (chdir(args[1]) != 0) {
-// 		printf("cd failed to %s\n", args[1]);
-// 	}
-// }
