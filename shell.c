@@ -1,20 +1,9 @@
 // Remote shell project [Phase 1] 
-// Date: Feb 26, 2022
+// Created Date: Feb 26, 2022
+// Latest Update : Mar 11, 2022
 // Author: Jeongin Lee
 
-// -- SUGGESTION : grep instead of clear ? --
-// Command list : ls, pwd, clear / mkdir, rm, cd, cat, find, echo, mv
-// L commands with no arg -- ls, pwd, clear
-// L commands with arg -- mkdir, rm, cd, cat, find, echo, mv
-// L commands that can be used with I/O redirecting -- echo, cat, grep
-// L pipes
-
-// -- UPDATE 03/02 --
-// Implemented commands using exec : ls, clear, pwd, mkdir, cat, echo, find, mv, rm
-// Implemented commands with extra methods : cd (new)
-// TO DO :
-//         I/O redirection
-//         pipes
+// Command List : ls, clear, pwd, mkdir, cat, echo, find, mv, rm, cd
 
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -38,7 +27,7 @@ int main(void) {
 	// char * args[MAX_ARGS]; // list of string to store the arguments
 	int arg_len;
 	char * valid_commands[COMMANDS] = {"ls", "pwd", "clear", "mkdir", "rm", "cd", "cat", "find", "echo", "mv"}; // list of supported commands
-	char * filename;
+	char * filename = (char *) malloc((MAX_ARG_LEN+1) * sizeof(char));
 
 	// --DYNAMIC ALLOCATION--
 	char * buffer; // allocate memory for buffer
@@ -68,14 +57,17 @@ int main(void) {
 		printf("%s $ ", cwd);
 
 		// get user input and store it in argument list
-		get_user_input(buffer, bufsize);
+		get_user_input(buffer, bufsize); // get user input and store it in buffer
 
 		// handle input/output redirection
 		bool redirect_input_found = false;
 		bool redirect_output_found = false;
 		int default_fd;
-		// TO DO - Currently implementing check_if_io_redirection() function
-		char * filename = check_if_io_redirection(buffer, bufsize, redirect_input_found, redirect_output_found); // check if there is input/output redirection, if there is, return the redirect sign & filename and update buffer (parse the input string)
+		filename = check_if_io_redirection(buffer, &redirect_input_found, &redirect_output_found); // check if there is input/output redirection, if there is, return the redirect sign & filename and update buffer (parse the input string)
+		// TEST
+		// printf("New buffer in shell.c : \"%s\"\n", buffer);
+		// printf("Filename in shell.c : \"%s\"\n", filename);
+
 		if (redirect_input_found == true && filename != NULL) { // if input_sign found, redirect input & return the default_fd 
 			default_fd = redirect_input(filename);
 		}
@@ -97,33 +89,6 @@ int main(void) {
 			printf("Invalid command : \"%s\"\n", args[0]);
 		}
 		else { // else, execute the program
-			// ----- check if there is input/output redirection ----- We can check this in the buffer level !
-			// bool redirect_input_found = false;
-			// bool redirect_output_found = false;
-			// int default_fd = 0;
-			// int i = 0;
-			// while (args[i] != NULL) {
-			// 	if (strcmp(args[i], "<") == 0) {
-			// 		redirect_input_found = true;
-			// 		filename = args[i+1]; // redirect input to the filename
-			// 		default_fd = redirect_input(filename);
-			// 		arg_len -= 2; // remove "<" and "filename" from the args list
-			// 	}
-			// 	else if (strcmp(args[i], ">") == 0) {
-			// 		redirect_output_found = true;
-			// 		filename = args[i+1]; // redirect input to the filename
-			// 		default_fd = redirect_output(filename);
-			// 		arg_len -= 2; // remove "<" and "filename" from the args list
-			// 	}
-
-			// 	if (redirect_input_found || redirect_output_found) // move the elements behind to the front
-			// 		args[i] = args[i+2];
-
-			// 	i++;
-			// }
-			// -------------------------------------------------------
-
-
 			// execute arguments in the args list - FOR PIPE : Maybe we can loop this line if there is multiple arguments that needs to be executed
 			execute(args);
 
@@ -132,7 +97,7 @@ int main(void) {
 				dup2(default_fd, STDIN_FILENO);
 				close(default_fd);
 			}
-			if (redirect_output_found == true) {
+			else if (redirect_output_found == true) {
 				dup2(default_fd, STDOUT_FILENO);
 				close(default_fd);
 			}
@@ -140,7 +105,10 @@ int main(void) {
 	}
 
 	// --DYNAMIC MEMORY--
+	free(filename);
 	free(buffer);
+	for (int i = 0; i < sizeof(args)/sizeof(args[0]); i++) // free each string in argument list
+		free(args[i]);
 	free(args);
 	return 0;
 }

@@ -6,10 +6,6 @@
 	and store the argument list into args
 */
 
-// void main_shell(char * buffer, size_t bufsize, char ** args);
-
-// int main_shell(char * buffer, char ** args);
-
 void get_user_input(char * buffer, size_t bufsize);
 
 int get_argument_list(char * buffer, char ** args);
@@ -21,3 +17,5 @@ int execute(char ** args);
 int redirect_input(char * filename);
 
 int redirect_output(char * filename);
+
+char * check_if_io_redirection(char * buffer, bool * redirect_input_found, bool * redirect_output_found);

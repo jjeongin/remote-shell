@@ -22,7 +22,7 @@ void get_user_input(char * buffer, size_t bufsize) {
 	getline(&buffer, &bufsize, stdin);
 	buffer[strcspn(buffer, "\n")] = 0; // remove new line character at the end (https://stackoverflow.com/questions/2693776/removing-trailing-newline-character-from-fgets-input)
 	// TEST
-	printf("Buffer : \"%s\"\n", buffer);
+	// printf("Buffer : \"%s\"\n", buffer);
 }
 
 int get_argument_list(char * buffer, char ** args) {
@@ -31,15 +31,15 @@ int get_argument_list(char * buffer, char ** args) {
 
 	args[arg_len] = strtok(buffer, delim); // first argument
 	// TEST
-	printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
+	// printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
 	while (args[arg_len] != NULL) {
 		arg_len++;
 		args[arg_len] = strtok(NULL, delim);
 		// TEST
-		printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
+		// printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
 	}
 	// TEST
-	printf("Arg length : %d.\n", arg_len);
+	// printf("Arg length : %d.\n", arg_len);
 
 	return arg_len;
 }
@@ -56,8 +56,10 @@ bool check_if_valid_command(char * command, char ** valid_commands) { // check i
 int redirect_input(char * filename) {
 	int default_fd = dup(STDIN_FILENO);
 	int temp_fd = open(filename, O_RDONLY);
-	if (temp_fd < 0) // error checking needed : check if filename exists
-		// error
+	if (temp_fd < 0) { // exit with error if filename not found
+		printf("Failed to open file with filename : \"%s\"\n", filename);
+		exit(1);
+	}
 	dup2(temp_fd, STDIN_FILENO);
 	close(temp_fd);
 	return default_fd;
@@ -66,62 +68,44 @@ int redirect_input(char * filename) {
 int redirect_output(char * filename) {
 	int default_fd = dup(STDOUT_FILENO);
 	int temp_fd = open(filename, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IRGRP | S_IWGRP | S_IWUSR);
+	if (temp_fd < 0) { // exit with error if filename not found
+		printf("Failed to open file with filename : \"%s\"\n", filename);
+		exit(1);
+	}
 	dup2(temp_fd, STDOUT_FILENO);
 	close(temp_fd);
 	return default_fd;
 }
 
-char * check_if_io_redirection(char * buffer, size_t bufsize, bool redirect_input_found, bool redirect_output_found) {
-	char * filename;
-	char * redirect_input_sign = strchr(buffer, "<");
-	char * redirect_output_sign = strchr(buffer, ">");
+char * check_if_io_redirection(char * buffer, bool * redirect_input_found, bool * redirect_output_found) {
+	char * redirect_input_sign = strstr(buffer, "<");
+	char * redirect_output_sign = strstr(buffer, ">");
+	char * filename = (char *) malloc((MAX_ARG_LEN+1) * sizeof(char));
 	char * delim = "\t\r\n ";
 	int pos = 0;
 
-	if (redirect_input_sign != NULL) {
-		redirect_input_found = true;
-		filename = buffer[redirect_input_sign+1]; // redirect input to the filename
-		filename = strtok(filename, delim); // remove white space in filename
-		int pos = redirect_input_sign - buffer;
+	if (redirect_input_sign != NULL) { // if input redirection sign is found
+		*redirect_input_found = true; // set signal to true
+		strcpy(filename, redirect_input_sign + 1); // copy the filename
+		filename = strtok(filename, delim); // remove any whitespace from the filename
+		pos = redirect_input_sign - buffer; // position (index) of the redirection sign
 	}
-	else if (redirect_output_sign != NULL) {
-		redirect_output_found = true;
-		filename = buffer[redirect_output_sign+1]; // redirect input to the filename
-		filename = strtok(filename, delim);// remove white space in filename
-		int pos = redirect_output_sign - buffer;
+	else if (redirect_output_sign != NULL) { // if output redirection sign is found
+		*redirect_output_found = true;
+		strcpy(filename, redirect_output_sign + 1);
+		filename = strtok(filename, delim);
+		pos = redirect_output_sign - buffer; // position (index) of the redirection sign
 	}
 
-	if (pos > 0) {
-		for (int i = pos; i < bufsize; i++) { // remove the redirect sign and filename from the back of the buffer
+
+	if (pos > 0) { // if any sign is found
+		for (int i = strlen(buffer)-1; i >= pos; i--) { // remove the redirect sign and filename from the back of the buffer
 			buffer[i] = '\0';
 		}
 	}
 
 	return filename;
 }
-
-// bool check_if_redirect_io(char ** args, int arg_len) {
-// 	bool redirect_input_found = false;
-// 	bool redirect_output_found = false;
-// 	int i = 0;
-// 	while (args[i] != NULL) {
-// 		if (strcmp(args[i], "<") == 0) {
-// 			redirect_input_found = true;
-// 			filename = args[i+1]; // redirect input to the filename
-// 			arg_len -= 2; // remove "<" and "filename" from the args list
-// 		}
-// 		else if (strcmp(args[i], ">") == 0) {
-// 			redirect_output_found = true;
-// 			filename = args[i+1]; // redirect input to the filename
-// 			arg_len -= 2; // remove "<" and "filename" from the args list
-// 		}
-
-// 		if (redirect_input_found || redirect_output_found) // move the elements behind to the front
-// 			args[i] = args[i+2];
-
-// 		i++;
-// 	}
-// }
 
 int execute(char ** args) { // execute the command
 	int status;
