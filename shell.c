@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
+#include <ctype.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
 #include <fcntl.h>
@@ -52,9 +53,8 @@ int main(void) {
 		char * cwd = getcwd(NULL, 0); // print current working directory
 		printf("%s $ ", cwd);
 
-		char * delim = "\t\r\n "; // blank space
 		get_user_input(buffer, bufsize); // get user input and store it in the buffer
-		if (strtok(buffer, delim) != NULL) // if the buffer is not empty
+		if (is_empty(buffer) == false) // if the buffer is not empty
 		{
 			// handle I/O redirection
 			bool redirect_input_found = false; // to check if there is any I/O redirection

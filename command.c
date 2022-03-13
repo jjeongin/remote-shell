@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
+#include <ctype.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
 #include <fcntl.h>
@@ -22,11 +23,23 @@
 #define MAX_ARG_LEN 50 // max length of one argument
 #define COMMANDS 13 // number of possible commands
 
+// get user input and store it in the buffer
 void get_user_input(char * buffer, size_t bufsize) {
 	getline(&buffer, &bufsize, stdin);
 	buffer[strcspn(buffer, "\n")] = 0; // remove new line character at the end (https://stackoverflow.com/questions/2693776/removing-trailing-newline-character-from-fgets-input)
 }
 
+// check if string is empty (https://stackoverflow.com/questions/3981510/getline-check-if-line-is-whitespace)
+bool is_empty(const char * string) {
+	while (*string) {
+		if (!isspace(*string))
+		  return false;
+		string++;
+	}
+ 	return true;
+}
+
+// parse the command string into an argument list
 int get_argument_list(char * buffer, char ** args) {
 	char * delim = "\t\r\n ";
 	int arg_len = 0;
@@ -39,7 +52,8 @@ int get_argument_list(char * buffer, char ** args) {
 	return arg_len;
 }
 
-bool check_if_valid_command(char * command, char ** valid_commands) { // check if the command is in valid command list
+// check if the command is in the valid command list
+bool check_if_valid_command(char * command, char ** valid_commands) {
 	for (int i = 0; i < COMMANDS; i++) {
         if (strcmp(command, valid_commands[i]) == 0) {
             return true;
@@ -48,6 +62,7 @@ bool check_if_valid_command(char * command, char ** valid_commands) { // check i
     return false;
 }
 
+// redirect input to the filename
 int redirect_input(char * filename) {
 	int default_fd = dup(STDIN_FILENO);
 	int temp_fd = open(filename, O_RDONLY);
@@ -60,6 +75,7 @@ int redirect_input(char * filename) {
 	return default_fd;
 }
 
+// redirect output to the filename
 int redirect_output(char * filename) {
 	int default_fd = dup(STDOUT_FILENO);
 	int temp_fd = open(filename, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IRGRP | S_IWGRP | S_IWUSR);
@@ -72,6 +88,7 @@ int redirect_output(char * filename) {
 	return default_fd;
 }
 
+// check if there is I/O redirection and if there is, remove the redirection sign & filename from the buffer and return the filename
 char * check_if_io_redirection(char * buffer, bool * redirect_input_found, bool * redirect_output_found) {
 	char * redirect_input_sign = strstr(buffer, "<");
 	char * redirect_output_sign = strstr(buffer, ">");
@@ -101,6 +118,7 @@ char * check_if_io_redirection(char * buffer, bool * redirect_input_found, bool 
 	return filename;
 }
 
+// execute command with argument list
 int execute(char ** args, char ** valid_commands) { // execute the command
 	if (check_if_valid_command(args[0], valid_commands) == false) { // error if the command is not in valid command list
 		printf("Invalid command : \"%s\"\n", args[0]);
@@ -161,6 +179,7 @@ void divide_buffer(char * buffer, char ** divided_buffers, int pipe_num)
 	}
 }
 
+// execute command with pipes
 int execute_pipes(char ** current_args, char ** valid_commands, char ** divided_buffers, int pipe_num)
 {
 	int fd[2]; // pipe

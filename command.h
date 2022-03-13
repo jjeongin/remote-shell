@@ -8,6 +8,8 @@
 
 void get_user_input(char * buffer, size_t bufsize);
 
+bool is_empty(const char * string);
+
 int get_argument_list(char * buffer, char ** args);
 
 bool check_if_valid_command(char * command, char ** valid_commands);
