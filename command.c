@@ -23,9 +23,7 @@
 #define COMMANDS 13 // number of possible commands
 
 void get_user_input(char * buffer, size_t bufsize) {
-	do {
-		getline(&buffer, &bufsize, stdin);
-	} while(strcmp(buffer, "") == 0);
+	getline(&buffer, &bufsize, stdin);
 	buffer[strcspn(buffer, "\n")] = 0; // remove new line character at the end (https://stackoverflow.com/questions/2693776/removing-trailing-newline-character-from-fgets-input)
 }
 
