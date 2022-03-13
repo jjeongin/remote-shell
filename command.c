@@ -1,6 +1,10 @@
 // Remote shell project [Phase 1] 
-// Date: Feb 26, 2022
-// Author: Jeongin Lee
+// Created Date: Feb 26, 2022
+// Latest Update : Mar 13, 2022
+// Author : Jeongin Lee, Nouf Alabbasi
+// Command List : ls, clear, pwd, mkdir, cat, echo, find, mv, rm, cd, grep
+
+// Function Implementation
 
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -16,13 +20,13 @@
 #define MAX_BUF 500 // max buffer size (https://www.geeksforgeeks.org/making-linux-shell-c/)
 #define MAX_ARGS 100 // max number of arguments
 #define MAX_ARG_LEN 50 // max length of one argument
-#define COMMANDS 13
+#define COMMANDS 13 // number of possible commands
 
 void get_user_input(char * buffer, size_t bufsize) {
-	getline(&buffer, &bufsize, stdin);
+	do {
+		getline(&buffer, &bufsize, stdin);
+	} while(strcmp(buffer, "") == 0);
 	buffer[strcspn(buffer, "\n")] = 0; // remove new line character at the end (https://stackoverflow.com/questions/2693776/removing-trailing-newline-character-from-fgets-input)
-	// TEST
-	// printf("Buffer : \"%s\"\n", buffer);
 }
 
 int get_argument_list(char * buffer, char ** args) {
@@ -30,17 +34,10 @@ int get_argument_list(char * buffer, char ** args) {
 	int arg_len = 0;
 
 	args[arg_len] = strtok(buffer, delim); // first argument
-	// TEST
-	printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
 	while (args[arg_len] != NULL) {
 		arg_len++;
 		args[arg_len] = strtok(NULL, delim);
-		// TEST
-		printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
 	}
-	// TEST
-	printf("Arg length : %d.\n", arg_len);
-
 	return arg_len;
 }
 
@@ -106,36 +103,38 @@ char * check_if_io_redirection(char * buffer, bool * redirect_input_found, bool 
 	return filename;
 }
 
-int execute(char ** args) { // execute the command
-	int status;
+int execute(char ** args, char ** valid_commands) { // execute the command
+	if (check_if_valid_command(args[0], valid_commands) == false) { // error if the command is not in valid command list
+		printf("Invalid command : \"%s\"\n", args[0]);
+		return 1;
+	}
 
-	if (strcmp(args[0], "exit") == 0 || strcmp(args[0], "quit") == 0) // end the program if the command is exit or quit
+	if (strcmp(args[0], "exit") == 0 || strcmp(args[0], "quit") == 0) // if the command is exit or quit, exit the whole program
 		exit(0);
-	else if (strcmp(args[0], "cd") == 0) { // if cd, execute chdir()
+	else if (strcmp(args[0], "cd") == 0) { // if the command is cd, execute chdir()
 		if (chdir(args[1]) != 0) {
 			printf("cd failed to %s\n", args[1]);
 		}
 	}
-	else {
+	else { // for other commands
 		pid_t pid = fork();
-	    if (pid < 0) // proccess failed
+	    if (pid < 0) // failed to fork
 	    {
 	        perror("Failed to Fork.\n");
 	        exit(1);
 	    }
 	    else if (pid == 0) // child
 	    {
-	        if (execvp(args[0], args) < 0) { // execute the command with argument list
-	            perror("Falied to execute the command.\n"); // if execution failed
+	        if (execvp(args[0], args) < 0) { // execute the command with the given argument list
+	            perror("Falied to execute the command.\n"); // error if execution failed
 	            exit(1);
 	        }
 	        exit(0);
 	    }
 	    else { // parent
-	    	waitpid(pid, &status, 0);
+	    	wait(NULL); // wait until the child process is finished executing
 	    }
-	}	
-
+	}
     return 0;
 }
 
@@ -145,46 +144,39 @@ int check_pipes(char * buffer)
 	int pipe_num = 0;
 	for(int i = 0 ; i < strlen(buffer) ; i++)
 	{
-		if (buffer[i]== '|')
+		if (buffer[i] == '|') // count the number of pipes in the buffer
 		    pipe_num++;
 	}
 	return pipe_num;
 }
 
-// divide buffer into pipe lists & execute each args
+// divide buffer into an array of parsed buffer
 void divide_buffer(char * buffer, char ** divided_buffers, int pipe_num)
 {
+	// divide the buffer by pipes (derived from https://stackoverflow.com/questions/15472299/split-string-into-tokens-and-save-them-in-an-array)
 	int buffer_num = 0;
-	//code to divide user input derived from https://stackoverflow.com/questions/15472299/split-string-into-tokens-and-save-them-in-an-array
-	if (pipe_num < 4){ // only execute upto three pipes
-		divided_buffers[buffer_num] = strtok(buffer, "|");
-		printf("divided_buffers %d : %s\n", buffer_num, divided_buffers[buffer_num]);
-		while (divided_buffers[buffer_num] != NULL)	//we then itterate over the charecters until the pointer and append the chars to each respective array 
-		{
-			buffer_num++;
-			divided_buffers[buffer_num] = strtok(NULL, "|");
-			printf("divided_buffers %d : %s\n", buffer_num, divided_buffers[buffer_num]);
-		}
-	}
-	else {
-		perror("Only 1 to 3 pipes are supported.\n");
+	divided_buffers[buffer_num] = strtok(buffer, "|");
+	while (divided_buffers[buffer_num] != NULL)	// itterate over the charecters until the pointer and append the chars to each respective array 
+	{
+		buffer_num++;
+		divided_buffers[buffer_num] = strtok(NULL, "|");
 	}
 }
 
-int execute_pipes(char ** current_args, char ** divided_buffers, int pipe_num)
+int execute_pipes(char ** current_args, char ** valid_commands, char ** divided_buffers, int pipe_num)
 {
-	int fd[2];
+	int fd[2]; // pipe
 	pid_t pid;
-	int counter = 0;
-	int fd_in = 0;
+	int counter = 0; // counter for each command in divided_buffers
+	int fd_in = 0; // store fd in value
 	int default_fd_in = dup(STDIN_FILENO); // save default stdin
 	int default_fd_out = dup(STDOUT_FILENO); // save default stdout
 
-	// while loop logic derived from https://stackoverflow.com/questions/17630247/coding-multiple-pipe-in-c
+	// execute pipe with while loop (logic derived from https://stackoverflow.com/questions/17630247/coding-multiple-pipe-in-c)
 	while(counter < pipe_num + 1) {
-		get_argument_list(divided_buffers[counter], current_args); // update current arguments with the next buffer
+		get_argument_list(divided_buffers[counter], current_args); // update current arguments with the next command
 
-		if (pipe(fd) < 0)
+		if (pipe(fd) < 0) // pipe creation failed
 		{
 			perror("Failed to create pipe.\n");
 			exit(EXIT_FAILURE);
@@ -201,8 +193,8 @@ int execute_pipes(char ** current_args, char ** divided_buffers, int pipe_num)
 			if (counter + 1  < pipe_num + 1) // if there are next arguments 
 				dup2(fd[1], STDOUT_FILENO); // redirect stdout to the reading end of the pipe
 			close(fd[0]); // close the reading end of the pipe
-			execute(current_args); // execute current arguments
-	        exit(0);
+			execute(current_args, valid_commands); // execute current arguments
+	        exit(0); // exit with success
 		}
 		else if (pid > 0) // parent
 		{

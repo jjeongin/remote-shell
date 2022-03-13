@@ -1,9 +1,10 @@
 // Remote shell project [Phase 1] 
 // Created Date: Feb 26, 2022
-// Latest Update : Mar 11, 2022
-// Author: Jeongin Lee
+// Latest Update : Mar 13, 2022
+// Author : Jeongin Lee, Nouf Alabbasi
+// Command List : ls, clear, pwd, mkdir, cat, echo, find, mv, rm, cd, grep
 
-// Command List : ls, clear, pwd, mkdir, cat, echo, find, mv, rm, cd
+// Shell Implementation
 
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -19,18 +20,14 @@
 #define MAX_BUF 500 // max buffer size (https://www.geeksforgeeks.org/making-linux-shell-c/)
 #define MAX_ARGS 100 // max number of arguments
 #define MAX_ARG_LEN 50 // max length of one argument
-#define COMMANDS 13
+#define COMMANDS 13 // number of possible commands
 
 int main(void) {
-	// --STATIC ALLOCATION--
-	// char buffer[MAX_BUF]; // string to store the user input
-	// char * args[MAX_ARGS]; // list of string to store the arguments
-	int arg_len;
+	// global variables
 	char * valid_commands[COMMANDS] = {"ls", "pwd", "mkdir", "rm", "cd", "cat", "find", "echo", "mv", "grep", "clear", "exit", "quit"}; // list of supported commands
-	char * filename = (char *) malloc((MAX_ARG_LEN+1) * sizeof(char));
-	// char ** divided_buffers = (char *) malloc((MAX_ARG_LEN+1) * sizeof(char));
+	char * filename = (char *) malloc((MAX_ARG_LEN+1) * sizeof(char)); // store filename when I/O redirection
 
-	// --DYNAMIC ALLOCATION--
+	// allocate memory for buffer and argument list
 	char * buffer; // allocate memory for buffer
 	size_t bufsize = MAX_BUF;
 	buffer = (char *) malloc(bufsize * sizeof(char));
@@ -50,21 +47,18 @@ int main(void) {
 	}
 
 	printf("---Welcome to the shell---\n");
-	while(1) { // repeat while the command is not exit or quit
-		arg_len = 0; // number of arguments
-
+	while(1) { // repeat
 		// shell interface
 		char * cwd = getcwd(NULL, 0); // print current working directory
 		printf("%s $ ", cwd);
 
-		// get user input and store it in argument list
-		get_user_input(buffer, bufsize); // get user input and store it in buffer
+		get_user_input(buffer, bufsize); // get user input and store it in the buffer
 
-		// handle input/output redirection
-		bool redirect_input_found = false;
+		// handle I/O redirection
+		bool redirect_input_found = false; // to check if there is any I/O redirection
 		bool redirect_output_found = false;
-		int default_fd;
-		filename = check_if_io_redirection(buffer, &redirect_input_found, &redirect_output_found); // check if there is input/output redirection, if there is, return the redirect sign & filename and update buffer (parse the input string)
+		int default_fd; // to restore default stdin/stdout later
+		filename = check_if_io_redirection(buffer, &redirect_input_found, &redirect_output_found); // check if there is any input/output redirection, if there is, return the filename & update the buffer (remove redirection sign and filename from the buffer)
 		
 		if (redirect_input_found == true && filename != NULL) { // if input_sign found, redirect input & return the default_fd 
 			default_fd = redirect_input(filename);
@@ -73,26 +67,22 @@ int main(void) {
 			default_fd = redirect_output(filename);
 		}
 
-
-		int pipe_num = check_pipes(buffer);
-		if (pipe_num > 0) { // if pipe exists
-			char * divided_buffers[pipe_num + 1];
-			divide_buffer(buffer, divided_buffers, pipe_num);
-			execute_pipes(args, divided_buffers, pipe_num);
+		// handle pipes
+		int pipe_num = check_pipes(buffer); // check if there is any pipe and if there is, return the number of pipes
+		if (pipe_num > 3) { // error if more than 3 pipes
+			perror("Only 1 to 3 pipes are supported.\n");
 		}
-		else {
-			printf("Current process in shell : %ld\n", (long)getpid());
-
-			arg_len = get_argument_list(buffer, args); // divide user input into argument list 
-			if (check_if_valid_command(args[0], valid_commands) == false) { // error if the command is not in valid command list
-				printf("Invalid command : \"%s\"\n", args[0]);
-			}
-			else { // else, execute the program
-				execute(args); // execute arguments in the args list
-			}
+		else if (pipe_num > 0) { // if 1 - 3 pipe exists 
+			char * divided_buffers[pipe_num + 1]; // create a new buffer array for each separate command
+			divide_buffer(buffer, divided_buffers, pipe_num); // divide buffer and store each command into the divided_buffers array
+			execute_pipes(args, valid_commands, divided_buffers, pipe_num); // execute each command in the divided_buffers
+		}
+		else { // if no pipe
+			get_argument_list(buffer, args); // divide user input and store each argument into an argument list
+			execute(args, valid_commands); // execute arguments in the argument list
 		}
 
-		// restore default stdin and stdout when I/O redirection
+		// restore the default stdin and stdout if I/O redirection happened
 		if (redirect_input_found == true) {
 			dup2(default_fd, STDIN_FILENO);
 			close(default_fd);
@@ -103,7 +93,7 @@ int main(void) {
 		}
 	}
 
-	// --DYNAMIC MEMORY--
+	// free the allocated memories
 	free(filename);
 	free(buffer);
 	for (int i = 0; i < sizeof(args)/sizeof(args[0]); i++) // free each string in argument list
