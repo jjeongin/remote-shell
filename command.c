@@ -16,7 +16,7 @@
 #define MAX_BUF 500 // max buffer size (https://www.geeksforgeeks.org/making-linux-shell-c/)
 #define MAX_ARGS 100 // max number of arguments
 #define MAX_ARG_LEN 50 // max length of one argument
-#define COMMANDS 10
+#define COMMANDS 11
 
 void get_user_input(char * buffer, size_t bufsize) {
 	getline(&buffer, &bufsize, stdin);
@@ -24,6 +24,22 @@ void get_user_input(char * buffer, size_t bufsize) {
 	// TEST
 	// printf("Buffer : \"%s\"\n", buffer);
 }
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+>>>>>>> Stashed changes
+
+int get_argument_list(char * buffer, char ** args) {
+	char * delim = "\t\r\n ";
+	int arg_len = 0;
+
+	args[arg_len] = strtok(buffer, delim); // first argument
+	// TEST
+<<<<<<< Updated upstream
+	// printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
+=======
+	printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
+=======
 
 int get_argument_list(char * buffer, char ** args) {
 	char * delim = "\t\r\n ";
@@ -32,14 +48,30 @@ int get_argument_list(char * buffer, char ** args) {
 	args[arg_len] = strtok(buffer, delim); // first argument
 	// TEST
 	// printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
+>>>>>>> b951faf2a3318d1cca0a0c5c083c44384ee9d729
+>>>>>>> Stashed changes
 	while (args[arg_len] != NULL) {
 		arg_len++;
 		args[arg_len] = strtok(NULL, delim);
 		// TEST
+<<<<<<< Updated upstream
 		// printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
 	}
 	// TEST
 	// printf("Arg length : %d.\n", arg_len);
+=======
+<<<<<<< HEAD
+		printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
+	}
+	// TEST
+	printf("Arg length : %d.\n", arg_len);
+=======
+		// printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
+	}
+	// TEST
+	// printf("Arg length : %d.\n", arg_len);
+>>>>>>> b951faf2a3318d1cca0a0c5c083c44384ee9d729
+>>>>>>> Stashed changes
 
 	return arg_len;
 }
@@ -96,8 +128,18 @@ char * check_if_io_redirection(char * buffer, bool * redirect_input_found, bool 
 		filename = strtok(filename, delim);
 		pos = redirect_output_sign - buffer; // position (index) of the redirection sign
 	}
+<<<<<<< Updated upstream
 
 
+=======
+<<<<<<< HEAD
+
+
+=======
+
+
+>>>>>>> b951faf2a3318d1cca0a0c5c083c44384ee9d729
+>>>>>>> Stashed changes
 	if (pos > 0) { // if any sign is found
 		for (int i = strlen(buffer)-1; i >= pos; i--) { // remove the redirect sign and filename from the back of the buffer
 			buffer[i] = '\0';
@@ -136,4 +178,190 @@ int execute(char ** args) { // execute the command
 	}	
 
     return 0;
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+}
+
+// check if there is any pipe and return the number of pipes
+int check_pipes(char * buffer)
+{
+	int pipe_num = 0;
+	for(int i = 0 ; i < strlen(buffer) ; i++)
+	{
+		if (buffer[i]== '|')
+		    pipe_num++;
+	}
+	return pipe_num;
+}
+
+// divide buffer into pipe lists & execute each args
+char ** divide_buffer(char * buffer, char ** divided_buffers, int pipe_num)
+{
+	int buffer_num = 0;
+	//code to divide user input derived from https://stackoverflow.com/questions/15472299/split-string-into-tokens-and-save-them-in-an-array
+	if (pipe_num < 4){ // only execute upto three pipes
+		divided_buffers[buffer_num] = strtok(buffer, "|");
+		printf("divided_buffers %d : %s\n", buffer_num, divided_buffers[buffer_num]);
+		while (divided_buffers[buffer_num] != NULL)	//we then itterate over the charecters until the pointer and append the chars to each respective array 
+		{
+			buffer_num++;
+			divided_buffers[buffer_num] = strtok(NULL, "|");
+			printf("divided_buffers %d : %s\n", buffer_num, divided_buffers[buffer_num]);
+		}
+		return divided_buffers;
+	}
+	else {
+		perror("Only 1 to 3 pipes are supported.\n");
+	}
+}
+
+
+int execute_pipes(char ** current_arg, char ** divided_buffers, int pipe_num)
+{
+	if (check_if_valid_command(args[0], valid_commands) == false) { // error if the command is not in valid command list
+		printf("Invalid command : \"%s\"\n", args[0]);
+	}
+
+	// int current_arg_len = get_argument_list(divided_buffers[0], current_arg);
+	if (pipe_num == 1)
+	{
+		// create pipe array and child
+		int pipe1[2];
+		if(pipe(pipe1) < 0){
+			perror("pipe");
+			exit(EXIT_FAILURE);
+		}
+
+		// fork child
+		pid_t child1 = fork();
+		if (child1 < 0)
+		{
+			perror("Failed to fork.\n"); // fork failed
+			exit(1);
+		}
+
+		else if (child1 == 0) // child
+		{
+			dup2(pipe1[1], STDOUT_FILENO);
+			close(pipe1[0]);
+			if (execvp(current_arg[0], current_arg) < 0) { // execute the command with argument list
+	            perror("Falied to execute the command.\n"); // if execution failed
+	            exit(1);
+	        }
+	        // execute(current_arg); // ls | less fails to be executed when using execute
+	        exit(0);
+		}
+		else if (child1 > 0) // parent
+		{
+			// int default_fd_in = dup(STDIN_FILENO);
+			dup2(pipe1[0], STDIN_FILENO);
+			close(pipe1[1]);
+			get_argument_list(divided_buffers[1], current_arg); // reinitialize
+			if (execvp(current_arg[0], current_arg) < 0) { // execute the command with argument list
+	            perror("Falied to execute the command.\n"); // if execution failed
+	            exit(1);
+	        }
+			exit(0);
+		}
+	}
+	return 0;
+
+	// if 2 pipes
+	/*
+	else if(pipe_num == 2)
+	{
+		// create pipe array
+		int pipe1[2];
+		int pipe2[2];
+
+		// create child
+		pid_t child1;
+		pid_t child2;
+
+		// create pipe + check if successful (from lab)
+		if (pipe(pipe1) < 0){
+			perror("pipe");
+			exit(EXIT_FAILURE);
+		}
+
+		// fork child
+		child1 = fork();
+
+		if (child1 < 0)
+		{
+			// fork failed
+			perror("fork");
+			exit(EXIT_FAILURE);
+		}
+
+		else if(child1==0)
+		{
+			// in child1 process
+			//output to pipe1 or STDOUT_FILENO
+			dup2(pipe1[1],STDOUT_FILENO);
+
+			//close the pipe1 read
+			close(pipe1[0]);
+			//execute the command
+			execvp(arg1[0],arg1);
+			//exit
+			exit(EXIT_SUCCESS);
+		}
+		else
+		{
+			// in parent process
+			// fork child2
+			child2 = fork();
+
+			if (child2 < 0)
+			{
+				// fork failed
+				perror("fork");
+				exit(EXIT_FAILURE);
+			}
+			else if (child2==0)
+			{
+				// in child 2 process
+				//get input from pipe1 insteadof STDIN_FILENO
+				dup2(pipe1[0],STDIN_FILENO);
+
+				//close the pipe1 write
+				close(pipe1[1]);
+
+
+				// create pipe2 + check if successful (from lab)
+				if(pipe(pipe2) < 0){
+					perror("pipe");
+					exit(EXIT_FAILURE);
+				}
+
+				dup2(pipe2[1],STDOUT_FILENO);
+
+				//close the pipe2 read
+				close(pipe2[0]);
+
+				// execute the command
+				execvp(arg2[0],arg2);
+				//exit
+				exit(EXIT_SUCCESS);
+			}
+			//in parent
+			// read from pipe2 instead of STDIN_FILENO
+			dup2(pipe2[0],STDIN_FILENO);
+
+			//close pipe2 write
+			close(pipe2[1]);
+			// execute the command
+			execvp(arg3[0],arg3);
+			//exit
+			exit(EXIT_SUCCESS); 
+		}
+
+	}
+	return 0;
+	*/
+=======
+>>>>>>> b951faf2a3318d1cca0a0c5c083c44384ee9d729
+>>>>>>> Stashed changes
 }
