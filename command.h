@@ -24,4 +24,4 @@ char ** divide_buffer(char * buffer, char ** divided_buffers, int pipe_num);
 
 int check_pipes(char * buffer);
 
-int execute_pipes(char ** current_arg, char ** divided_buffers, int pipe_num);
+int execute_pipes(char ** current_args, char ** divided_buffers, int pipe_num);

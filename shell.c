@@ -19,14 +19,14 @@
 #define MAX_BUF 500 // max buffer size (https://www.geeksforgeeks.org/making-linux-shell-c/)
 #define MAX_ARGS 100 // max number of arguments
 #define MAX_ARG_LEN 50 // max length of one argument
-#define COMMANDS 11
+#define COMMANDS 13
 
 int main(void) {
 	// --STATIC ALLOCATION--
 	// char buffer[MAX_BUF]; // string to store the user input
 	// char * args[MAX_ARGS]; // list of string to store the arguments
 	int arg_len;
-	char * valid_commands[COMMANDS] = {"ls", "pwd", "clear", "mkdir", "rm", "cd", "cat", "find", "echo", "mv", "grep"}; // list of supported commands
+	char * valid_commands[COMMANDS] = {"ls", "pwd", "mkdir", "rm", "cd", "cat", "find", "echo", "mv", "grep", "clear", "exit", "quit"}; // list of supported commands
 	char * filename = (char *) malloc((MAX_ARG_LEN+1) * sizeof(char));
 	// char ** divided_buffers = (char *) malloc((MAX_ARG_LEN+1) * sizeof(char));
 
@@ -85,30 +85,23 @@ int main(void) {
 			char * divided_buffers[pipe_num + 1];
 			divide_buffer(buffer, divided_buffers, pipe_num);
 
-			int current_arg_len = get_argument_list(divided_buffers[0], args);
-
-			if (strcmp(args[0], "exit") == 0 || strcmp(args[0], "quit") == 0) // end the program if the command is exit or quit
-				return 0;
-
+			// get_argument_list(divided_buffers[0], args);
 			// if (check_if_valid_command(args[0], valid_commands) == false) { // error if the command is not in valid command list
 			// 	printf("Invalid command : \"%s\"\n", args[0]);
 			// }
-			else {
-				execute_pipes(args, divided_buffers, pipe_num);
-			}
+			// else {
+			execute_pipes(args, divided_buffers, pipe_num);
+			// }
 		}
 		else {
+			printf("Current process in shell : %ld\n", (long)getpid());
+
 			arg_len = get_argument_list(buffer, args); // divide user input into argument list 
-
-			if (strcmp(args[0], "exit") == 0 || strcmp(args[0], "quit") == 0) // end the program if the command is exit or quit
-				return 0;
-
 			if (check_if_valid_command(args[0], valid_commands) == false) { // error if the command is not in valid command list
 				printf("Invalid command : \"%s\"\n", args[0]);
 			}
 			else { // else, execute the program
-				// execute arguments in the args list - FOR PIPE : Maybe we can loop this line if there is multiple arguments that needs to be executed
-				execute(args);
+				execute(args); // execute arguments in the args list
 			}
 		}
 
