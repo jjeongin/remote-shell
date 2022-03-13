@@ -65,10 +65,7 @@ int main(void) {
 		bool redirect_output_found = false;
 		int default_fd;
 		filename = check_if_io_redirection(buffer, &redirect_input_found, &redirect_output_found); // check if there is input/output redirection, if there is, return the redirect sign & filename and update buffer (parse the input string)
-		// TEST
-		// printf("New buffer in shell.c : \"%s\"\n", buffer);
-		// printf("Filename in shell.c : \"%s\"\n", filename);
-
+		
 		if (redirect_input_found == true && filename != NULL) { // if input_sign found, redirect input & return the default_fd 
 			default_fd = redirect_input(filename);
 		}
@@ -76,22 +73,12 @@ int main(void) {
 			default_fd = redirect_output(filename);
 		}
 
-		// pipe
-		int pipe_num = check_pipes(buffer);
-		if (pipe_num > 0) {
-			// TEST
-			printf("in pipe \n");
 
+		int pipe_num = check_pipes(buffer);
+		if (pipe_num > 0) { // if pipe exists
 			char * divided_buffers[pipe_num + 1];
 			divide_buffer(buffer, divided_buffers, pipe_num);
-
-			// get_argument_list(divided_buffers[0], args);
-			// if (check_if_valid_command(args[0], valid_commands) == false) { // error if the command is not in valid command list
-			// 	printf("Invalid command : \"%s\"\n", args[0]);
-			// }
-			// else {
 			execute_pipes(args, divided_buffers, pipe_num);
-			// }
 		}
 		else {
 			printf("Current process in shell : %ld\n", (long)getpid());
@@ -105,7 +92,7 @@ int main(void) {
 			}
 		}
 
-		// restore default stdin and stdout
+		// restore default stdin and stdout when I/O redirection
 		if (redirect_input_found == true) {
 			dup2(default_fd, STDIN_FILENO);
 			close(default_fd);

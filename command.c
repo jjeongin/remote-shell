@@ -16,7 +16,7 @@
 #define MAX_BUF 500 // max buffer size (https://www.geeksforgeeks.org/making-linux-shell-c/)
 #define MAX_ARGS 100 // max number of arguments
 #define MAX_ARG_LEN 50 // max length of one argument
-#define COMMANDS 11
+#define COMMANDS 13
 
 void get_user_input(char * buffer, size_t bufsize) {
 	getline(&buffer, &bufsize, stdin);
@@ -97,7 +97,6 @@ char * check_if_io_redirection(char * buffer, bool * redirect_input_found, bool 
 		pos = redirect_output_sign - buffer; // position (index) of the redirection sign
 	}
 
-
 	if (pos > 0) { // if any sign is found
 		for (int i = strlen(buffer)-1; i >= pos; i--) { // remove the redirect sign and filename from the back of the buffer
 			buffer[i] = '\0';
@@ -110,7 +109,9 @@ char * check_if_io_redirection(char * buffer, bool * redirect_input_found, bool 
 int execute(char ** args) { // execute the command
 	int status;
 
-	if (strcmp(args[0], "cd") == 0) { // if cd, execute chdir()
+	if (strcmp(args[0], "exit") == 0 || strcmp(args[0], "quit") == 0) // end the program if the command is exit or quit
+		exit(0);
+	else if (strcmp(args[0], "cd") == 0) { // if cd, execute chdir()
 		if (chdir(args[1]) != 0) {
 			printf("cd failed to %s\n", args[1]);
 		}
@@ -151,7 +152,7 @@ int check_pipes(char * buffer)
 }
 
 // divide buffer into pipe lists & execute each args
-char ** divide_buffer(char * buffer, char ** divided_buffers, int pipe_num)
+void divide_buffer(char * buffer, char ** divided_buffers, int pipe_num)
 {
 	int buffer_num = 0;
 	//code to divide user input derived from https://stackoverflow.com/questions/15472299/split-string-into-tokens-and-save-them-in-an-array
@@ -164,156 +165,57 @@ char ** divide_buffer(char * buffer, char ** divided_buffers, int pipe_num)
 			divided_buffers[buffer_num] = strtok(NULL, "|");
 			printf("divided_buffers %d : %s\n", buffer_num, divided_buffers[buffer_num]);
 		}
-		return divided_buffers;
 	}
 	else {
 		perror("Only 1 to 3 pipes are supported.\n");
 	}
 }
 
-
-int execute_pipes(char ** current_arg, char ** divided_buffers, int pipe_num)
+int execute_pipes(char ** current_args, char ** divided_buffers, int pipe_num)
 {
-	if (check_if_valid_command(args[0], valid_commands) == false) { // error if the command is not in valid command list
-		printf("Invalid command : \"%s\"\n", args[0]);
-	}
+	int fd[2];
+	pid_t pid;
+	int counter = 0;
+	int fd_in = 0;
+	int default_fd_in = dup(STDIN_FILENO); // save default stdin
+	int default_fd_out = dup(STDOUT_FILENO); // save default stdout
 
-	// int current_arg_len = get_argument_list(divided_buffers[0], current_arg);
-	if (pipe_num == 1)
-	{
-		// create pipe array and child
-		int pipe1[2];
-		if(pipe(pipe1) < 0){
-			perror("pipe");
+	// while loop logic derived from https://stackoverflow.com/questions/17630247/coding-multiple-pipe-in-c
+	while(counter < pipe_num + 1) {
+		get_argument_list(divided_buffers[counter], current_args); // update current arguments with the next buffer
+
+		if (pipe(fd) < 0)
+		{
+			perror("Failed to create pipe.\n");
 			exit(EXIT_FAILURE);
 		}
-
-		// fork child
-		pid_t child1 = fork();
-		if (child1 < 0)
+		pid = fork();
+		if (pid < 0)
 		{
 			perror("Failed to fork.\n"); // fork failed
 			exit(1);
 		}
-
-		else if (child1 == 0) // child
+		else if (pid == 0) // child
 		{
-			dup2(pipe1[1], STDOUT_FILENO);
-			close(pipe1[0]);
-			if (execvp(current_arg[0], current_arg) < 0) { // execute the command with argument list
-	            perror("Falied to execute the command.\n"); // if execution failed
-	            exit(1);
-	        }
-	        // execute(current_arg); // ls | less fails to be executed when using execute
+			dup2(fd_in, STDIN_FILENO); // redirect stdin to the writing end of the pipe
+			if (counter + 1  < pipe_num + 1) // if there are next arguments 
+				dup2(fd[1], STDOUT_FILENO); // redirect stdout to the reading end of the pipe
+			close(fd[0]); // close the reading end of the pipe
+			execute(current_args); // execute current arguments
 	        exit(0);
 		}
-		else if (child1 > 0) // parent
+		else if (pid > 0) // parent
 		{
-			// int default_fd_in = dup(STDIN_FILENO);
-			dup2(pipe1[0], STDIN_FILENO);
-			close(pipe1[1]);
-			get_argument_list(divided_buffers[1], current_arg); // reinitialize
-			if (execvp(current_arg[0], current_arg) < 0) { // execute the command with argument list
-	            perror("Falied to execute the command.\n"); // if execution failed
-	            exit(1);
-	        }
-			exit(0);
+			wait(NULL); // wait for the child to execute the first arguments
+			close(fd[1]); // close the writing end of the pipe
+			fd_in = fd[0]; // store fd in for the execution of the next arguments
+			counter++; // increase counter
 		}
 	}
+	dup2(default_fd_out, STDOUT_FILENO); // restore the default stdout
+	dup2(default_fd_in, STDIN_FILENO); // restore the default stdin
+	close(default_fd_out);
+	close(default_fd_in);
+
 	return 0;
-
-	// if 2 pipes
-	/*
-	else if(pipe_num == 2)
-	{
-		// create pipe array
-		int pipe1[2];
-		int pipe2[2];
-
-		// create child
-		pid_t child1;
-		pid_t child2;
-
-		// create pipe + check if successful (from lab)
-		if (pipe(pipe1) < 0){
-			perror("pipe");
-			exit(EXIT_FAILURE);
-		}
-
-		// fork child
-		child1 = fork();
-
-		if (child1 < 0)
-		{
-			// fork failed
-			perror("fork");
-			exit(EXIT_FAILURE);
-		}
-
-		else if(child1==0)
-		{
-			// in child1 process
-			//output to pipe1 or STDOUT_FILENO
-			dup2(pipe1[1],STDOUT_FILENO);
-
-			//close the pipe1 read
-			close(pipe1[0]);
-			//execute the command
-			execvp(arg1[0],arg1);
-			//exit
-			exit(EXIT_SUCCESS);
-		}
-		else
-		{
-			// in parent process
-			// fork child2
-			child2 = fork();
-
-			if (child2 < 0)
-			{
-				// fork failed
-				perror("fork");
-				exit(EXIT_FAILURE);
-			}
-			else if (child2==0)
-			{
-				// in child 2 process
-				//get input from pipe1 insteadof STDIN_FILENO
-				dup2(pipe1[0],STDIN_FILENO);
-
-				//close the pipe1 write
-				close(pipe1[1]);
-
-
-				// create pipe2 + check if successful (from lab)
-				if(pipe(pipe2) < 0){
-					perror("pipe");
-					exit(EXIT_FAILURE);
-				}
-
-				dup2(pipe2[1],STDOUT_FILENO);
-
-				//close the pipe2 read
-				close(pipe2[0]);
-
-				// execute the command
-				execvp(arg2[0],arg2);
-				//exit
-				exit(EXIT_SUCCESS);
-			}
-			//in parent
-			// read from pipe2 instead of STDIN_FILENO
-			dup2(pipe2[0],STDIN_FILENO);
-
-			//close pipe2 write
-			close(pipe2[1]);
-			// execute the command
-			execvp(arg3[0],arg3);
-			//exit
-			exit(EXIT_SUCCESS); 
-		}
-
-	}
-	return 0;
-	*/
 }

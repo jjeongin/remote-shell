@@ -20,7 +20,7 @@ int redirect_output(char * filename);
 
 char * check_if_io_redirection(char * buffer, bool * redirect_input_found, bool * redirect_output_found);
 
-char ** divide_buffer(char * buffer, char ** divided_buffers, int pipe_num);
+void divide_buffer(char * buffer, char ** divided_buffers, int pipe_num);
 
 int check_pipes(char * buffer);
 
