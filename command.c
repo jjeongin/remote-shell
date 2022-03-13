@@ -24,10 +24,6 @@ void get_user_input(char * buffer, size_t bufsize) {
 	// TEST
 	// printf("Buffer : \"%s\"\n", buffer);
 }
-<<<<<<< Updated upstream
-=======
-<<<<<<< HEAD
->>>>>>> Stashed changes
 
 int get_argument_list(char * buffer, char ** args) {
 	char * delim = "\t\r\n ";
@@ -35,43 +31,15 @@ int get_argument_list(char * buffer, char ** args) {
 
 	args[arg_len] = strtok(buffer, delim); // first argument
 	// TEST
-<<<<<<< Updated upstream
-	// printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
-=======
 	printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
-=======
-
-int get_argument_list(char * buffer, char ** args) {
-	char * delim = "\t\r\n ";
-	int arg_len = 0;
-
-	args[arg_len] = strtok(buffer, delim); // first argument
-	// TEST
-	// printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
->>>>>>> b951faf2a3318d1cca0a0c5c083c44384ee9d729
->>>>>>> Stashed changes
 	while (args[arg_len] != NULL) {
 		arg_len++;
 		args[arg_len] = strtok(NULL, delim);
 		// TEST
-<<<<<<< Updated upstream
-		// printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
-	}
-	// TEST
-	// printf("Arg length : %d.\n", arg_len);
-=======
-<<<<<<< HEAD
 		printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
 	}
 	// TEST
 	printf("Arg length : %d.\n", arg_len);
-=======
-		// printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
-	}
-	// TEST
-	// printf("Arg length : %d.\n", arg_len);
->>>>>>> b951faf2a3318d1cca0a0c5c083c44384ee9d729
->>>>>>> Stashed changes
 
 	return arg_len;
 }
@@ -128,18 +96,8 @@ char * check_if_io_redirection(char * buffer, bool * redirect_input_found, bool 
 		filename = strtok(filename, delim);
 		pos = redirect_output_sign - buffer; // position (index) of the redirection sign
 	}
-<<<<<<< Updated upstream
 
 
-=======
-<<<<<<< HEAD
-
-
-=======
-
-
->>>>>>> b951faf2a3318d1cca0a0c5c083c44384ee9d729
->>>>>>> Stashed changes
 	if (pos > 0) { // if any sign is found
 		for (int i = strlen(buffer)-1; i >= pos; i--) { // remove the redirect sign and filename from the back of the buffer
 			buffer[i] = '\0';
@@ -178,9 +136,6 @@ int execute(char ** args) { // execute the command
 	}	
 
     return 0;
-<<<<<<< Updated upstream
-=======
-<<<<<<< HEAD
 }
 
 // check if there is any pipe and return the number of pipes
@@ -361,7 +316,4 @@ int execute_pipes(char ** current_arg, char ** divided_buffers, int pipe_num)
 	}
 	return 0;
 	*/
-=======
->>>>>>> b951faf2a3318d1cca0a0c5c083c44384ee9d729
->>>>>>> Stashed changes
 }

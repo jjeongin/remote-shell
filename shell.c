@@ -26,17 +26,9 @@ int main(void) {
 	// char buffer[MAX_BUF]; // string to store the user input
 	// char * args[MAX_ARGS]; // list of string to store the arguments
 	int arg_len;
-<<<<<<< HEAD
 	char * valid_commands[COMMANDS] = {"ls", "pwd", "clear", "mkdir", "rm", "cd", "cat", "find", "echo", "mv", "grep"}; // list of supported commands
 	char * filename = (char *) malloc((MAX_ARG_LEN+1) * sizeof(char));
 	// char ** divided_buffers = (char *) malloc((MAX_ARG_LEN+1) * sizeof(char));
-=======
-	char * valid_commands[COMMANDS] = {"ls", "pwd", "clear", "mkdir", "rm", "cd", "cat", "find", "echo", "mv"}; // list of supported commands
-	char * filename = (char *) malloc((MAX_ARG_LEN+1) * sizeof(char));
-<<<<<<< Updated upstream
-=======
->>>>>>> b951faf2a3318d1cca0a0c5c083c44384ee9d729
->>>>>>> Stashed changes
 
 	// --DYNAMIC ALLOCATION--
 	char * buffer; // allocate memory for buffer
@@ -67,7 +59,6 @@ int main(void) {
 
 		// get user input and store it in argument list
 		get_user_input(buffer, bufsize); // get user input and store it in buffer
-<<<<<<< Updated upstream
 
 		// handle input/output redirection
 		bool redirect_input_found = false;
@@ -84,37 +75,6 @@ int main(void) {
 		else if (redirect_output_found == true && filename != NULL) { // else if output_sign found, redirect output & return the default_fd 
 			default_fd = redirect_output(filename);
 		}
-=======
-<<<<<<< HEAD
-
-		// handle input/output redirection
-		bool redirect_input_found = false;
-		bool redirect_output_found = false;
-		int default_fd;
-		filename = check_if_io_redirection(buffer, &redirect_input_found, &redirect_output_found); // check if there is input/output redirection, if there is, return the redirect sign & filename and update buffer (parse the input string)
-		// TEST
-		// printf("New buffer in shell.c : \"%s\"\n", buffer);
-		// printf("Filename in shell.c : \"%s\"\n", filename);
-
-=======
-
-		// handle input/output redirection
-		bool redirect_input_found = false;
-		bool redirect_output_found = false;
-		int default_fd;
-		filename = check_if_io_redirection(buffer, &redirect_input_found, &redirect_output_found); // check if there is input/output redirection, if there is, return the redirect sign & filename and update buffer (parse the input string)
-		// TEST
-		// printf("New buffer in shell.c : \"%s\"\n", buffer);
-		// printf("Filename in shell.c : \"%s\"\n", filename);
-
->>>>>>> b951faf2a3318d1cca0a0c5c083c44384ee9d729
-		if (redirect_input_found == true && filename != NULL) { // if input_sign found, redirect input & return the default_fd 
-			default_fd = redirect_input(filename);
-		}
-		else if (redirect_output_found == true && filename != NULL) { // else if output_sign found, redirect output & return the default_fd 
-			default_fd = redirect_output(filename);
-		}
-<<<<<<< HEAD
 
 		// pipe
 		int pipe_num = check_pipes(buffer);
@@ -161,40 +121,6 @@ int main(void) {
 			dup2(default_fd, STDOUT_FILENO);
 			close(default_fd);
 		}
-=======
->>>>>>> Stashed changes
-
-		// TO DO - check if pipe sign ("|") in the string
-		// check if pipe and return the number of the pipe detected
-		// if there is at least one pipe, divide the input into multiple string
-		// loop through each string, divide each into args list, and execute each
-
-		arg_len = get_argument_list(buffer, args); // divide user input into argument list 
-
-		if (strcmp(args[0], "exit") == 0 || strcmp(args[0], "quit") == 0) // end the program if the command is exit or quit
-			return 0;
-
-		if (check_if_valid_command(args[0], valid_commands) == false) { // error if the command is not in valid command list
-			printf("Invalid command : \"%s\"\n", args[0]);
-		}
-		else { // else, execute the program
-			// execute arguments in the args list - FOR PIPE : Maybe we can loop this line if there is multiple arguments that needs to be executed
-			execute(args);
-
-			// restore default stdin and stdout
-			if (redirect_input_found == true) {
-				dup2(default_fd, STDIN_FILENO);
-				close(default_fd);
-			}
-			else if (redirect_output_found == true) {
-				dup2(default_fd, STDOUT_FILENO);
-				close(default_fd);
-			}
-		}
-<<<<<<< Updated upstream
-=======
->>>>>>> b951faf2a3318d1cca0a0c5c083c44384ee9d729
->>>>>>> Stashed changes
 	}
 
 	// --DYNAMIC MEMORY--
