@@ -40,7 +40,7 @@ CFLAGS = -Wall -g
 # 	$(CC) $(CFLAGS) -c command.c
 
 all: server client
-	$(CC) $(CFLAGS) -o all client server
+	
 
 server: server.c command.o
 	$(CC) $(CFLAGS) -o server server.c command.o
@@ -53,4 +53,9 @@ command.o: command.c command.h
 
 clean: 
 	rm -f 
+
+
+
+
+
 
