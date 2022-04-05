@@ -54,7 +54,6 @@ int main()
 	server_address.sin_port = htons(PORT);
 	server_address.sin_addr.s_addr = INADDR_ANY;
 
-
 	//bind the socket to our specified IP and port
 	if (bind(server_socket, 
 		(struct sockaddr *) &server_address,
@@ -63,14 +62,12 @@ int main()
 		printf("socket bind failed..\n");
         exit(EXIT_FAILURE);
 	}
-	 
 
 	//after it is bound, we can listen for connections
 	if(listen(server_socket,5)<0){
 		printf("Listen failed..\n");
         exit(EXIT_FAILURE);
 	}
-	 
 
 
 	int addrlen = sizeof(server_address);	
@@ -85,27 +82,20 @@ int main()
 		printf("accept failed..\n");
         exit(EXIT_FAILURE);
 	}
-	
 
-	// # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #
-	// # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #
-	// # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #
-		// next steps:
-			// pipe the output or store it into a string, then send it to client
-			// loop over the whole thing
-
+	// ----------------------------------------
     // allocate memories
     char * valid_commands[COMMANDS] = {"ls", "pwd", "mkdir", "rm", "cd", "cat", "find", "echo", "mv", "grep", "clear", "exit", "quit"}; // list of supported commands
 	char * filename = (char *) malloc((MAX_ARG_LEN+1) * sizeof(char)); // store filename when I/O redirection
 
-	// allocate memory for buffer and argument list
-	char * buffer; // allocate memory for buffer
-	size_t bufsize = MAX_BUF;
-	buffer = (char *) malloc(bufsize * sizeof(char));
-	if (buffer == NULL) {
-		perror("Failed to allocate buffer.\n");
-		exit(1);
-	}
+	// // allocate memory for buffer and argument list
+	// char * buffer; // allocate memory for buffer
+	// size_t bufsize = MAX_BUF;
+	// buffer = (char *) malloc(bufsize * sizeof(char));
+	// if (buffer == NULL) {
+	// 	perror("Failed to allocate buffer.\n");
+	// 	exit(1);
+	// }
 
 	char ** args = (char **) malloc(MAX_ARGS * sizeof(char*)); // allocate memory for argument list (https://stackoverflow.com/questions/5935933/dynamically-create-an-array-of-strings-with-malloc)
 	for (int i = 0; i < MAX_ARGS; i++) {
@@ -117,71 +107,76 @@ int main()
 		}
 	}
 
+	char buffer[100];
+	char output[1024];
+	// ----------------------------------------
     // receive command message from client
-    recv(client_socket , &buffer , sizeof(buffer), 0);
-    // Redirect IO
-    dup2(client_socket, 0);
-    dup2(client_socket, 1);
-    dup2(client_socket, 2);
+    printf("Server : \n");
+    while (1) { // repeat
+    	bzero(buffer, 100);
+    	recv(client_socket, &buffer, sizeof(buffer), 0);
+    	printf("Buffer received: %s\n", buffer);
 
-    printf("Now in server..");
-    if (is_empty(buffer) == false) // if the buffer is not empty
-    {
-        // handle I/O redirection
-        bool redirect_input_found = false; // to check if there is any I/O redirection
-        bool redirect_output_found = false;
-        int default_fd; // to restore default stdin/stdout later
-        filename = check_if_io_redirection(buffer, &redirect_input_found, &redirect_output_found); // check if there is any input/output redirection, if there is, return the filename & update the buffer (remove redirection sign and filename from the buffer)
-        
-        if (redirect_input_found == true && filename != NULL) { // if input_sign found, redirect input & return the default_fd 
-            default_fd = redirect_input(filename);
-        }
-        else if (redirect_output_found == true && filename != NULL) { // else if output_sign found, redirect output & return the default_fd 
-            default_fd = redirect_output(filename);
-        }
+    	// redirect output of exec using pipe (https://stackoverflow.com/questions/2605130/redirecting-exec-output-to-a-buffer-or-file)
+    	int fd[2];
+    	pipe(fd);
+    	pid_t pid = fork();
+    	if (pid == 0) {
+    		close(fd[0]); // close reading end
+    		dup2(fd[1], 1); // send stdout to the pipe
+    		close(fd[1]);
+    		// get_argument_list(buffer, args); // divide user input and store each argument into an argument list
+		    // execute(args, valid_commands);
+		    	// execute the command
+		    if (is_empty(buffer) == false) // if the buffer is not empty
+		    {
+		        // handle I/O redirection
+		        bool redirect_input_found = false; // to check if there is any I/O redirection
+		        bool redirect_output_found = false;
+		        int default_fd; // to restore default stdin/stdout later
+		        filename = check_if_io_redirection(buffer, &redirect_input_found, &redirect_output_found); // check if there is any input/output redirection, if there is, return the filename & update the buffer (remove redirection sign and filename from the buffer)
+		        
+		        if (redirect_input_found == true && filename != NULL) { // if input_sign found, redirect input & return the default_fd 
+		            default_fd = redirect_input(filename);
+		        }
+		        else if (redirect_output_found == true && filename != NULL) { // else if output_sign found, redirect output & return the default_fd 
+		            default_fd = redirect_output(filename);
+		        }
 
-        // handle pipes
-        int pipe_num = check_pipes(buffer); // check if there is any pipe and if there is, return the number of pipes
-        if (pipe_num > 3) { // error if more than 3 pipes
-            perror("Only 1 to 3 pipes are supported.\n");
-        }
-        else if (pipe_num > 0) { // if 1 - 3 pipe exists 
-            char * divided_buffers[pipe_num + 1]; // create a new buffer array for each separate command
-            divide_buffer(buffer, divided_buffers, pipe_num); // divide buffer and store each command into the divided_buffers array
-            execute_pipes(args, valid_commands, divided_buffers, pipe_num); // execute each command in the divided_buffers
+		        // handle pipes
+		        int pipe_num = check_pipes(buffer); // check if there is any pipe and if there is, return the number of pipes
+		        if (pipe_num > 3) { // error if more than 3 pipes
+		            perror("Only 1 to 3 pipes are supported.\n");
+		        }
+		        else if (pipe_num > 0) { // if 1 - 3 pipe exists 
+		            char * divided_buffers[pipe_num + 1]; // create a new buffer array for each separate command
+		            divide_buffer(buffer, divided_buffers, pipe_num); // divide buffer and store each command into the divided_buffers array
+		            execute_pipes(args, valid_commands, divided_buffers, pipe_num); // execute each command in the divided_buffers
+		        }
+		        else { // if no pipe
+		            get_argument_list(buffer, args); // divide user input and store each argument into an argument list
+		            execute(args, valid_commands); // execute arguments in the argument list
+		        }
 
-        }
-        else { // if no pipe
-            get_argument_list(buffer, args); // divide user input and store each argument into an argument list
-            execute(args, valid_commands); // execute arguments in the argument list
-        }
-
-        // restore the default stdin and stdout if I/O redirection happened
-        if (redirect_input_found == true) {
-            dup2(default_fd, STDIN_FILENO);
-            close(default_fd);
-        }
-        else if (redirect_output_found == true) {
-            dup2(default_fd, STDOUT_FILENO);
-            close(default_fd);
-        }
+		        // restore the default stdin and stdout if I/O redirection happened
+		        if (redirect_input_found == true) {
+		            dup2(default_fd, STDIN_FILENO);
+		            close(default_fd);
+		        }
+		        else if (redirect_output_found == true) {
+		            dup2(default_fd, STDOUT_FILENO);
+		            close(default_fd);
+		        }
+		    }
+    	}
+    	else if (pid > 0) {
+    		close(fd[1]);
+    		read(fd[0], output, sizeof(output));
+    		close(fd[0]);
+    		dup2(1, STDOUT_FILENO); // restore default fd
+    		send(client_socket, output, sizeof(output), 0);
+    	}
     }
-    // send();
-
-    // char command[1024];
-    // recv(client_socket , &command , sizeof(command),0);
-
-    // execlp(command, command, NULL); 
-    //print out the data we get back
-    // printf("Received: %s\n" , command);
-
-
-		// pipeString[];
-    // send(client_socket , pipeString , sizeof(pipeString),0);
-    
-	// # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #
-	// # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #
-	// # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #
 
 
 	//close the socket
@@ -189,7 +184,7 @@ int main()
     close(client_socket);
 
     free(filename);
-	free(buffer);
+	// free(buffer);
 	for (int i = 0; i < sizeof(args)/sizeof(args[0]); i++) // free each string in argument list
 		free(args[i]);
 	free(args);

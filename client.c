@@ -23,6 +23,7 @@
 #define MAX_ARGS 100 // max number of arguments
 #define MAX_ARG_LEN 50 // max length of one argument
 #define COMMANDS 13 // number of possible commands
+#define MAX_OUTPUT 1000 // max length of output string
 
 int main(){
 	//create a socket
@@ -34,7 +35,6 @@ int main(){
         printf("socket creation failed..\n");
         exit(EXIT_FAILURE);
     }
-    
 
 	//connect to another socket on the other side
 	
@@ -56,61 +56,53 @@ int main(){
 		printf("There was an error making a connection to the remote socket \n\n");
 		exit(EXIT_FAILURE);
 	}
-	
-	// global variables
-	// char * valid_commands[COMMANDS] = {"ls", "pwd", "mkdir", "rm", "cd", "cat", "find", "echo", "mv", "grep", "clear", "exit", "quit"}; // list of supported commands
-	// char * filename = (char *) malloc((MAX_ARG_LEN+1) * sizeof(char)); // store filename when I/O redirection
 
 	// allocate memory for buffer and argument list
-	char * buffer; // allocate memory for buffer
-	size_t bufsize = MAX_BUF;
-	buffer = (char *) malloc(bufsize * sizeof(char));
-	if (buffer == NULL) {
-		perror("Failed to allocate buffer.\n");
-		exit(1);
-	}
-
-	// char ** args = (char **) malloc(MAX_ARGS * sizeof(char*)); // allocate memory for argument list (https://stackoverflow.com/questions/5935933/dynamically-create-an-array-of-strings-with-malloc)
-	// for (int i = 0; i < MAX_ARGS; i++) {
-	// 	args[i] = malloc((MAX_ARG_LEN+1) * sizeof(char));
-
- 	// 	if (args == NULL) {
-	// 		perror("Failed to allocate argument list.\n");
-	// 		exit(1);
-	// 	}
+	// char * buffer; // allocate memory for buffer
+	// size_t bufsize = MAX_BUF;
+	// buffer = (char *) malloc(bufsize * sizeof(char));
+	// if (buffer == NULL) {
+	// 	perror("Failed to allocate buffer.\n");
+	// 	exit(1);
 	// }
-    //now that we have the connect, we either send or receive data
 
+	// char * output; // allocate memory for output
+	// output = (char *) malloc(MAX_OUTPUT * sizeof(char));
+	// if (output == NULL) {
+	// 	perror("Failed to allocate output string.\n");
+	// 	exit(1);
+	// }
+	char buffer[100];
+	char output[1024];
 
 	// # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #
 	// # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #
 	// # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #
 
-	// next steps:
-		// use the getInput function
-		// loop over the whole thing
-	// # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #
-    printf("Client : ---Welcome to the shell---\n");
+	printf("Client : \n");
+    printf("---Welcome to the shell---\n");
     while (1) { // repeat
 		// shell interface
-		char * cwd = getcwd(NULL, 0); // print current working directory
-		printf("%s $ ", cwd);
+        // ask for the server's cwd ?
+		// char * cwd = getcwd(NULL, 0); // print current working directory
+		// printf("%s $ ", cwd);
+		printf("$ ");
+		bzero(buffer, sizeof(buffer)); // place nbyte null bytes in the string s
+		get_user_input(buffer, sizeof(buffer)); // get user input and store it in the buffer
+        send(network_socket, buffer, sizeof(buffer), 0);
 
-		get_user_input(buffer, bufsize); // get user input and store it in the buffer
-        send(network_socket, buffer, bufsize, 0);
+        bzero(output, sizeof(output));
+
+        recv(network_socket, &output, sizeof(output), 0);
+        printf("Result: %s\n", output);
     }
-    // send(network_socket , buffer , bufsize,0);
-	// # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #
-	// # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #
-	// # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #
-
-
 
 	// close socket after we are done
 	close(network_socket);
 
     // free the allocated memories
-	free(buffer);
+	// free(buffer);
+	// free(output);
 	return 0;
 
 }
