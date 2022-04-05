@@ -120,9 +120,6 @@ int main()
     // receive command message from client
     recv(client_socket , &buffer , sizeof(buffer), 0);
     // Redirect IO
-    dup2(client_socket, 0);
-    dup2(client_socket, 1);
-    dup2(client_socket, 2);
 
     printf("Now in server..");
     if (is_empty(buffer) == false) // if the buffer is not empty
