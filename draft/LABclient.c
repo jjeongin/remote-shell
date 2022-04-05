@@ -94,6 +94,9 @@ int main(){
     printf("buffer: %s\n", buffer);
     send(network_socket , buffer , bufsize,0);
 
+	char output[1024];
+	recv(network_socket , &output , sizeof(output),0);
+	printf("%s\n"output);
 
 
 

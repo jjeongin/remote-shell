@@ -113,7 +113,7 @@ int main()
 
 	int pipefds[2];
 	pid_t pid;
-	char buf[30];
+	char buf[500];
 
 
 	//create pipe
@@ -124,7 +124,7 @@ int main()
 
 	//fill a block of memory with given/particular value.
 	//fills the 30 blocks of buf with 0
-		memset(buf,0,30);
+		memset(buf,0,500);
 
 		pid = fork();
 
@@ -154,14 +154,17 @@ int main()
 	else{
 		dup2(pipefds[0],STDIN_FILENO);
 		close(pipefds[1]);         
-		while(read(pipefds[0], buf, 1)==1)   
-			printf("CHILD read from pipe -- %s\n", buf);
+		// while(read(pipefds[0], buf, 1)==1)   
+		// 	printf("CHILD read from pipe -- %s\n", buf);
+		read(pipefds[0],buf,sizeof(buf));
+		// printf("\n%s\n\n",buf);
+		send(client_socket , buf , sizeof(buf),0);
 		close(pipefds[0]);
 		printf("CHILD: EXITING!");
 		exit(EXIT_SUCCESS);
 
 	}
-	
+
 
 
 
