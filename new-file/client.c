@@ -1,0 +1,75 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h> 
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+#include <unistd.h>
+#include <ctype.h>
+#include <sys/wait.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include "command.h"
+
+#define PORT 3002 //or 8080 or any other unused port value
+#define MAX_BUF 500 // max buffer size (https://www.geeksforgeeks.org/making-linux-shell-c/)
+#define MAX_ARGS 100 // max number of arguments
+#define MAX_ARG_LEN 50 // max length of one argument
+#define COMMANDS 13 // number of possible commands
+#define _GNU_SOURCE
+
+int main(){
+
+	//create a socket
+	int network_socket;
+	network_socket = socket(AF_INET , SOCK_STREAM, 0);
+
+	//check for fail error
+	if (network_socket == -1) {
+        printf("socket creation failed..\n");
+        exit(EXIT_FAILURE);
+    }
+    
+
+	//connect to another socket on the other side
+	
+	//specify an address for the socket we want to connect to
+	struct sockaddr_in server_address;
+	server_address.sin_family = AF_INET;
+	server_address.sin_port = htons(PORT);
+	server_address.sin_addr.s_addr = INADDR_ANY;
+
+
+	//connect
+	int connection_status = 
+	connect(network_socket, 
+			(struct sockaddr *) &server_address,
+			sizeof(server_address));
+
+	//check for errors with the connection
+	if(connection_status == -1){
+		printf("There was an error making a connection to the remote socket \n\n");
+		exit(EXIT_FAILURE);
+	}
+	
+
+	//now that we have the connect, we either send or receive data
+
+	// test 	// test 	// test
+	char name[7] = "Flavio";
+	int length = strlen(name);
+    send(network_socket , name , length,0);
+	// test 	// test 	// test
+
+
+	//close socket after we are done
+	close(network_socket);
+
+
+
+	return 0;
+}
