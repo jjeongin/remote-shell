@@ -88,15 +88,21 @@ int main(){
 		}
 	}
 
-	getline(&buffer, &bufsize, stdin);
-	buffer[strcspn(buffer, "\n")] = 0; // remove new line character at the end (https://stackoverflow.com/questions/2693776/removing-trailing-newline-character-from-fgets-input)
+	while(1) { // repeat
+		// getline(&buffer, &bufsize, stdin);
+		// buffer[strcspn(buffer, "\n")] = 0; // remove new line character at the end (https://stackoverflow.com/questions/2693776/removing-trailing-newline-character-from-fgets-input)
 
-    printf("buffer: %s\n", buffer);
-    send(network_socket , buffer , bufsize,0);
+		get_user_input(buffer, bufsize); // get user input and store it in the buffer
 
-	char output[1024];
-	recv(network_socket , &output , sizeof(output),0);
-	printf("%s\n"output);
+	    printf("buffer: %s\n", buffer);
+
+
+	    send(network_socket , buffer , bufsize,0);
+
+		char output[500];
+		recv(network_socket , &output , sizeof(output),0);
+		printf("this: %s\n",output);
+	}
 
 
 
