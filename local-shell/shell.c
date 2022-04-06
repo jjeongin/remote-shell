@@ -1,8 +1,8 @@
-// Remote shell project [Phase 1] 
-// Created Date: Feb 26, 2022
-// Latest Update : Mar 13, 2022
+// Remote shell project [Phase 2] 
+// Created Date : Mar 28, 2022
+// Latest Update : April 6, 2022
 // Author : Jeongin Lee, Nouf Alabbasi
-// Command List : ls, clear, pwd, mkdir, cat, echo, find, mv, rm, cd, grep
+// Command List : ls, clear, pwd, mkdir, cat, echo, find, mv, rm, grep
 
 // Shell Implementation
 
@@ -25,7 +25,7 @@
 
 int main(void) {
 	// global variables
-	char * valid_commands[COMMANDS] = {"ls", "pwd", "mkdir", "rm", "cd", "cat", "find", "echo", "mv", "grep", "clear", "exit", "quit"}; // list of supported commands
+	char * valid_commands[COMMANDS] = {"ls", "pwd", "mkdir", "rm", "cat", "find", "echo", "mv", "grep", "clear", "exit", "quit"}; // list of supported commands
 	char * filename = (char *) malloc((MAX_ARG_LEN+1) * sizeof(char)); // store filename when I/O redirection
 
 	// allocate memory for buffer and argument list
