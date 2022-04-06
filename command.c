@@ -21,7 +21,7 @@
 #define MAX_BUF 500 // max buffer size (https://www.geeksforgeeks.org/making-linux-shell-c/)
 #define MAX_ARGS 100 // max number of arguments
 #define MAX_ARG_LEN 50 // max length of one argument
-#define COMMANDS 13 // number of possible commands
+#define COMMANDS 12 // number of possible commands
 
 // get user input and store it in the buffer
 void get_user_input(char * buffer, size_t bufsize) {
@@ -45,9 +45,11 @@ int get_argument_list(char * buffer, char ** args) {
 	int arg_len = 0;
 
 	args[arg_len] = strtok(buffer, delim); // first argument
+	// printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
 	while (args[arg_len] != NULL) {
 		arg_len++;
 		args[arg_len] = strtok(NULL, delim);
+		// printf("Arg %d : \"%s\"\n", arg_len, args[arg_len]);
 	}
 	return arg_len;
 }
@@ -125,8 +127,11 @@ int execute(char ** args, char ** valid_commands) { // execute the command
 		return 1;
 	}
 
-	if (strcmp(args[0], "exit") == 0 || strcmp(args[0], "quit") == 0) // if the command is exit or quit, exit the whole program
-		exit(0);
+	if (strcmp(args[0], "exit") == 0 || strcmp(args[0], "quit") == 0) { // if the command is exit or quit, exit the whole program
+		printf("EXIT");
+		// exit(0);
+		return 0;
+	}
 	else if (strcmp(args[0], "cd") == 0) { // if the command is cd, execute chdir()
 		if (chdir(args[1]) != 0) {
 			printf("cd failed to %s\n", args[1]);
@@ -142,7 +147,7 @@ int execute(char ** args, char ** valid_commands) { // execute the command
 	    else if (pid == 0) // child
 	    {
 	        if (execvp(args[0], args) < 0) { // execute the command with the given argument list
-	            perror("Falied to execute the command.\n"); // error if execution failed
+	            printf("Falied to execute the command.\n"); // error if execution failed
 	            exit(1);
 	        }
 	        exit(0);

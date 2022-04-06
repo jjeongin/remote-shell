@@ -28,19 +28,19 @@
 #include <netinet/in.h>
 #include "command.h"
 
-#define PORT 9002 //or 8080 or any other unused port value
+#define PORT 8080 //or 8080 or any other unused port value
 #define MAX_BUF 500 // max buffer size (https://www.geeksforgeeks.org/making-linux-shell-c/)
+#define MAX_OUTPUT 1024
 #define MAX_ARGS 100 // max number of arguments
 #define MAX_ARG_LEN 50 // max length of one argument
-#define COMMANDS 13 // number of possible commands
-#define PORT 9002
+#define COMMANDS 12 // number of possible commands
 
 
 int main()
 {
 	//create socket
 	int server_socket;
-	server_socket = socket(AF_INET , SOCK_STREAM,0);
+	server_socket = socket(AF_INET , SOCK_STREAM, 0);
 
 	//check for fail error
 	if (server_socket == -1) {
@@ -64,11 +64,10 @@ int main()
 	}
 
 	//after it is bound, we can listen for connections
-	if(listen(server_socket,5)<0){
+	if(listen(server_socket,5) < 0){
 		printf("Listen failed..\n");
         exit(EXIT_FAILURE);
 	}
-
 
 	int addrlen = sizeof(server_address);	
 
@@ -85,7 +84,7 @@ int main()
 
 	// ----------------------------------------
     // allocate memories
-    char * valid_commands[COMMANDS] = {"ls", "pwd", "mkdir", "rm", "cd", "cat", "find", "echo", "mv", "grep", "clear", "exit", "quit"}; // list of supported commands
+    char * valid_commands[COMMANDS] = {"ls", "pwd", "mkdir", "rm", "cat", "find", "echo", "mv", "grep", "clear", "exit", "quit"}; // list of supported commands
 	char * filename = (char *) malloc((MAX_ARG_LEN+1) * sizeof(char)); // store filename when I/O redirection
 
 	// // allocate memory for buffer and argument list
@@ -107,13 +106,13 @@ int main()
 		}
 	}
 
-	char buffer[100];
-	char output[1024];
+	char buffer[MAX_BUF];
+	char output[MAX_OUTPUT];
 	// ----------------------------------------
     // receive command message from client
     printf("Server : \n");
     while (1) { // repeat
-    	bzero(buffer, 100);
+    	bzero(buffer, MAX_BUF);
     	recv(client_socket, &buffer, sizeof(buffer), 0);
     	printf("Buffer received: %s\n", buffer);
 
@@ -121,13 +120,11 @@ int main()
     	int fd[2];
     	pipe(fd);
     	pid_t pid = fork();
-    	if (pid == 0) {
+    	if (pid == 0) { // child
     		close(fd[0]); // close reading end
-    		dup2(fd[1], 1); // send stdout to the pipe
+    		dup2(fd[1], STDOUT_FILENO); // send stdout to the pipe
     		close(fd[1]);
-    		// get_argument_list(buffer, args); // divide user input and store each argument into an argument list
-		    // execute(args, valid_commands);
-		    	// execute the command
+    		
 		    if (is_empty(buffer) == false) // if the buffer is not empty
 		    {
 		        // handle I/O redirection
@@ -155,7 +152,7 @@ int main()
 		        }
 		        else { // if no pipe
 		            get_argument_list(buffer, args); // divide user input and store each argument into an argument list
-		            execute(args, valid_commands); // execute arguments in the argument list
+		           	execute(args, valid_commands);
 		        }
 
 		        // restore the default stdin and stdout if I/O redirection happened
@@ -168,25 +165,35 @@ int main()
 		            close(default_fd);
 		        }
 		    }
+		    exit(0);
     	}
-    	else if (pid > 0) {
+    	else if (pid > 0) { // parent
+    		wait(NULL);
     		close(fd[1]);
+    		bzero(output, 1024);
     		read(fd[0], output, sizeof(output));
     		close(fd[0]);
     		dup2(1, STDOUT_FILENO); // restore default fd
     		send(client_socket, output, sizeof(output), 0);
+    		if (strcmp(output, "EXIT") == 0) { // if exit
+    			break;
+    		}
     	}
     }
 
+ //    free(filename);
+ //    for (int i = 0; i < sizeof(args)/sizeof(args[0]); i++) // free each string in argument list
+	// 	free(args[i]);
+	// free(args);
 
-	//close the socket
+	//close the sockets
 	close(server_socket);
     close(client_socket);
 
-    free(filename);
+    // free(filename);
 	// free(buffer);
-	for (int i = 0; i < sizeof(args)/sizeof(args[0]); i++) // free each string in argument list
-		free(args[i]);
-	free(args);
+	// for (int i = 0; i < sizeof(args)/sizeof(args[0]); i++) // free each string in argument list
+	// 	free(args[i]);
+	// free(args);
 	return 0;
 }

@@ -18,12 +18,11 @@
 #include <fcntl.h>
 #include "command.h"
 
-#define PORT 9002 //or 8080 or any other unused port value
+#define PORT 8080 //or 8080 or any other unused port value
 #define MAX_BUF 500 // max buffer size (https://www.geeksforgeeks.org/making-linux-shell-c/)
+#define MAX_OUTPUT 1024 // max length of output string
 #define MAX_ARGS 100 // max number of arguments
 #define MAX_ARG_LEN 50 // max length of one argument
-#define COMMANDS 13 // number of possible commands
-#define MAX_OUTPUT 1000 // max length of output string
 
 int main(){
 	//create a socket
@@ -57,23 +56,8 @@ int main(){
 		exit(EXIT_FAILURE);
 	}
 
-	// allocate memory for buffer and argument list
-	// char * buffer; // allocate memory for buffer
-	// size_t bufsize = MAX_BUF;
-	// buffer = (char *) malloc(bufsize * sizeof(char));
-	// if (buffer == NULL) {
-	// 	perror("Failed to allocate buffer.\n");
-	// 	exit(1);
-	// }
-
-	// char * output; // allocate memory for output
-	// output = (char *) malloc(MAX_OUTPUT * sizeof(char));
-	// if (output == NULL) {
-	// 	perror("Failed to allocate output string.\n");
-	// 	exit(1);
-	// }
-	char buffer[100];
-	char output[1024];
+	char buffer[MAX_BUF];
+	char output[MAX_OUTPUT];
 
 	// # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #
 	// # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #  # # # # #
@@ -94,7 +78,11 @@ int main(){
         bzero(output, sizeof(output));
 
         recv(network_socket, &output, sizeof(output), 0);
-        printf("Result: %s\n", output);
+        if (strcmp(output, "EXIT") == 0) {
+        	break;
+        }
+        else
+        	printf("Result: %s\n", output);
     }
 
 	// close socket after we are done
