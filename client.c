@@ -82,7 +82,8 @@ int main(){
         	break;
         }
         else
-        	printf("Result: %s\n", output);
+        	printf("%s\n", output);
+        	// printf("Result: %s\n", output);
     }
 
 	// close socket after we are done
