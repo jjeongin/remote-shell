@@ -67,7 +67,6 @@ int main(){
 	char buffer[MAX_BUF];
 	char output[MAX_OUTPUT];
 
-	printf("Client : \n");
 	printf("---Welcome to the shell---\n");
 	while (1) { // repeat
 
@@ -89,7 +88,7 @@ int main(){
 			break;
 		}
 		else
-			printf("Result: %s\n", output);
+			printf("%s\n", output);
 	}
 	// _____________________________recieve command output from shell socket and print results
 

@@ -116,7 +116,6 @@ int main()
 	char output[MAX_OUTPUT];
 
 	// _____________________________recieve user input from client socket and store in buffer
-	printf("Server : \n");
 	while (1) { // repeat
 
 
@@ -134,6 +133,7 @@ int main()
 		if (pid == 0) { // child
 			close(fd[0]); // close reading end
 			dup2(fd[1], STDOUT_FILENO); // send stdout to the pipe
+			dup2(fd[1], STDERR_FILENO); // send stderr to the pipe
 			close(fd[1]);
 			
 			if (is_empty(buffer) == false) // if the buffer is not empty

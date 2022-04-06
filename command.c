@@ -129,14 +129,13 @@ int execute(char ** args, char ** valid_commands) { // execute the command
 
 	if (strcmp(args[0], "exit") == 0 || strcmp(args[0], "quit") == 0) { // if the command is exit or quit, exit the whole program
 		printf("EXIT");
-		// exit(0);
 		return 0;
 	}
-	else if (strcmp(args[0], "cd") == 0) { // if the command is cd, execute chdir()
-		if (chdir(args[1]) != 0) {
-			printf("cd failed to %s\n", args[1]);
-		}
-	}
+	// else if (strcmp(args[0], "cd") == 0) { // if the command is cd, execute chdir()
+	// 	if (chdir(args[1]) != 0) {
+	// 		printf("cd failed to %s\n", args[1]);
+	// 	}
+	// }
 	else { // for other commands
 		pid_t pid = fork();
 	    if (pid < 0) // failed to fork
