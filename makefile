@@ -1,7 +1,7 @@
-# Phase 1: LOCAL
-
 # CC = gcc
 # CFLAGS = -Wall -g
+
+# # ****************************************************
 
 # shell: shell.o command.o
 # 	$(CC) $(CFLAGS) -o shell shell.o command.o
@@ -15,7 +15,6 @@
 # clean: 
 # 	rm -f 
 
-# Phase 2: REMOTE
 
 CC = gcc
 CFLAGS = -Wall -g
