@@ -27,7 +27,7 @@
 
 int main(){
 
-	// _____________________________socket code pt 1(inspired by the code from lab 7)
+	// _____________________________socket code pt 1(socket code inspired by the code from lab 7)
 	//1. create a socket
 	int client_socket;
 	client_socket = socket(AF_INET , SOCK_STREAM, 0); //socket( domain/family of the socket, type of socket,  protocol for connection)
