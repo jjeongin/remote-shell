@@ -20,6 +20,8 @@
 CC = gcc
 CFLAGS = -Wall -g
 
+all: server client
+
 server: server.c command.o
 	$(CC) $(CFLAGS) -o server server.c command.o
 
