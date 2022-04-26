@@ -15,6 +15,8 @@
 #include <ctype.h>
 #include <sys/wait.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <fcntl.h>
 
 #include "command.h"
@@ -122,6 +124,12 @@ char * check_if_io_redirection(char * buffer, bool * redirect_input_found, bool 
 
 // execute command with argument list
 int execute(char ** args, char ** valid_commands) { // execute the command
+	struct stat sb; // filename execution
+	if (stat(args[0], &sb) == 0 && sb.st_mode & S_IXUSR) {
+	    system(args[0]);
+		return 0;
+	}
+
 	if (check_if_valid_command(args[0], valid_commands) == false) { // error if the command is not in valid command list
 		printf("Invalid command : \"%s\"\n", args[0]);
 		return 1;
