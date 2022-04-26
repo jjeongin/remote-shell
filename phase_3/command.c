@@ -124,7 +124,7 @@ char * check_if_io_redirection(char * buffer, bool * redirect_input_found, bool 
 
 // execute command with argument list
 int execute(char ** args, char ** valid_commands) { // execute the command
-	struct stat sb; // filename execution
+	struct stat sb; // filename execution (https://stackoverflow.com/questions/13098620/using-stat-to-check-if-a-file-is-executable-in-c)
 	if (stat(args[0], &sb) == 0 && sb.st_mode & S_IXUSR) {
 	    system(args[0]);
 		return 0;
