@@ -38,7 +38,7 @@ void* RunCommands (void * socket);
 int main()
 {
 	// _____________________________socket code pt 1(socket code inspired by the code from lab 7)
-	//1. create a socket
+	// create a socket
 	int shell_socket;
 	shell_socket = socket(AF_INET , SOCK_STREAM, 0); //socket( domain/family of the socket, type of socket,  protocol for connection)
 
@@ -95,19 +95,16 @@ int main()
 
 		// _____________________________create thread
 		pthread_t thread;
-		pthread_create(&thread,NULL,RunCommands,&client_socket);
+		pthread_create(&thread, NULL, RunCommands, &client_socket);
 		// _____________________________create thread
 	}
 	close(shell_socket);
 	return 0; 
+}
 
-} 
-
-void* RunCommands (void * socket){
-
+void* RunCommands(void * socket){
 	int *sock=(int*)socket;
 	int s=*sock;
-
 
 	// _____________________________executing the commands
 	// allocate memories
