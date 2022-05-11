@@ -206,7 +206,7 @@ void* scheduler(void * socket, struct Program * p){
 	do
 	{
 		swapped = 0;
-		p = start;
+		p = head;
   
 		while (p->next != currentptr)     
 		{
