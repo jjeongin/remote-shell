@@ -152,15 +152,15 @@ int main()
 	}
 
 	struct Program *head = LIST_FIRST(&waiting_queue); // free waiting queue
-   	while (head != NULL) {
-       struct Program *next = LIST_NEXT(head, pointers);
-       free(head);
-       head = next;
-   	}
-   	LIST_INIT(&waiting_queue);
+	while (head != NULL) {
+	   struct Program *next = LIST_NEXT(head, pointers);
+	   free(head);
+	   head = next;
+	}
+	LIST_INIT(&waiting_queue);
 
-   	sem_close(sem_wq); // close semaphore
-    sem_unlink("sem_wq");
+	sem_close(sem_wq); // close semaphore
+	sem_unlink("sem_wq");
 
 	close(shell_socket);
 	return 0; 
@@ -192,9 +192,40 @@ int execute_program(struct Program * p){
 	return burst;
 }
 
-void* scheduler(void * socket){
-	return 0;
+void* scheduler(void * socket, struct Program * p){
+	// reorder list based on the burst time
+
+	// inspired by https://www.geeksforgeeks.org/bubble-sort-on-doubly-linked-list/
+	int swapped;
+	struct Program *currentptr = NULL;
+  
+	/* Checking for empty list */
+	if (head == NULL)
+		return;
+  
+	do
+	{
+		swapped = 0;
+		p = start;
+  
+		while (p->next != currentptr)     
+		{
+			if (p->data > p->next->data)
+			{
+				//check if this works
+				program* temp = p;
+				p = p -> next;
+				p -> next = temp;
+
+				swapped = 1;
+			}
+			p = p->next;
+		}
+		currentptr = p;
+	}
+	while (swapped);
 }
+
 
 void* client_handler(void * socket){
 	int *sock=(int*)socket;
