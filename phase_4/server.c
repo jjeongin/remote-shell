@@ -215,8 +215,6 @@ int main()
 
 		if (first->current == first->burst) // if program finished being executed
 			LIST_REMOVE(first, pointers);
-		else // else add it back to the waiting queue
-			LIST_INSERT_HEAD(&waiting_queue, first, pointers);
 
 		printf("Main thread executed\n");
 
@@ -229,17 +227,6 @@ int main()
 	}
 
 	struct Program *head = LIST_FIRST(&waiting_queue); // free waiting queue
-// <<<<<<< HEAD
-// 	while (head != NULL) {
-// 	   struct Program *next = LIST_NEXT(head, pointers);
-// 	   free(head);
-// 	   head = next;
-// 	}
-// 	LIST_INIT(&waiting_queue);
-
-// 	sem_close(sem_wq); // close semaphore
-// 	sem_unlink("sem_wq");
-// =======
    	while (head != NULL) {
        struct Program *next = LIST_NEXT(head, pointers);
        // free argument list & divided buffers
@@ -254,7 +241,6 @@ int main()
     sem_unlink("/semaphore_wq");
     sem_unlink("/semaphore_running");
     sem_unlink("/semaphore_not_running");
-// >>>>>>> 68071df6cb437f586ebdf7c5851787e443b140bf
 
 	close(shell_socket);
 	return 0; 
@@ -456,7 +442,6 @@ void check_for_SJR(void * socket, struct Program * p){
 	}
 	while (swapped);
 }
-
 
 void* client_handler(void * socket){
 	int *sock=(int*)socket;
