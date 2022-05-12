@@ -34,7 +34,6 @@
 #define MAX_ARG_LEN 50 // max length of one argument
 #define COMMANDS 12 // number of possible commands
 
-void* scheduler(void * socket);
 void* client_handler(void * socket);
 sem_t *sem_wq; // declare semaphore
 sem_t *sem_running;
@@ -113,6 +112,8 @@ struct Program * create_program(pid_t tid, int socket, int burst, int pipe_num, 
 	return p;
 }
 
+void* scheduler(void * socket, struct Program * p);
+void check_for_SJR(void * socket, struct Program * p);
 int execute_program(struct Program * p); // execute each program
 
 LIST_HEAD(head, Program); // create head of the waiting queue (doubly linked list of programs)
@@ -205,20 +206,25 @@ int main()
 		pthread_create(&client_thread, NULL, client_handler, &client_socket);
 		// _____________________________create thread
 
-		// pthread_join(scheduler, NULL);
-		pthread_join(client_thread, NULL); // wait until client thread ends
+		pthread_join(client_thread, NULL); // wait until the program is added to the waiting queue
+		pthread_join(scheduler, NULL); // wait until the programs are scheduled
 		printf("MAIN thread:\n");
 
-		struct Program *current = LIST_FIRST(&waiting_queue); // execute program from the top of the waiting queue
-		execute_program(current);
-		LIST_REMOVE(current, pointers);
-		printf("Waiting queue executed\n");
+		struct Program *first = LIST_FIRST(&waiting_queue); // execute program from the top of the waiting queue
+		execute_program(first);
 
-		struct Program *p;
-		LIST_FOREACH(p, &waiting_queue, pointers) {
-			printf("[MAIN] programs in waiting queue args[0]: %s\n", p->args[0]);
-			printf("[MAIN] programs in waiting queue args[1]: %s\n", p->args[1]);
-		}
+		if (first->current == first->burst) // if program finished being executed
+			LIST_REMOVE(first, pointers);
+		else // else add it back to the waiting queue
+			LIST_INSERT_HEAD(&waiting_queue, first, pointers);
+
+		printf("Main thread executed\n");
+
+		// struct Program *p;
+		// LIST_FOREACH(p, &waiting_queue, pointers) {
+		// 	printf("[MAIN] programs in waiting queue args[0]: %s\n", p->args[0]);
+		// 	printf("[MAIN] programs in waiting queue args[1]: %s\n", p->args[1]);
+		// }
 
 	}
 
@@ -268,11 +274,9 @@ int execute_program(struct Program * p){
 	int burst = p->burst;
 	int time = 0; // counter
 
-	// for (int i = current; i <= burst; i++) {
 
 	printf("semaphore running waiting ...\n");
-	// sem_wait(sem_running); // we can use multiple semaphores instead of checking semaphore value (sem_get_value() deprecated in MAC)
-	sem_wait(sem_not_running); // don't know why but this semaphore works oppositie in my computer ?!
+	sem_wait(sem_running); // we can use multiple semaphores instead of checking semaphore value (sem_get_value() deprecated in MAC)
 	printf("semaphore wq waiting ...\n");
 	sem_wait(sem_wq);
 	printf("semaphores finished waiting !\n");
@@ -284,11 +288,6 @@ int execute_program(struct Program * p){
 		execute(args, valid_commands);
 	}
 
-	sem_post(sem_wq);
-	sem_post(sem_not_running);
-
-
-	/* Currently working on this !
 	// execute the command and send client socket the output
 	// using pipes to redirect output of exec (https://stackoverflow.com/questions/2605130/redirecting-exec-output-to-a-buffer-or-file)
 	int fd[2];
@@ -315,20 +314,22 @@ int execute_program(struct Program * p){
 		read(fd[0], output, sizeof(output));
 		close(fd[0]);
 
-		// while (* output != '\0') {
-	 //        fputc(* output, stdout);
-	 //        output++;
-	 //        time++;
-	 //        sleep(1);
-	 //        printf("current time spent: %d\n");
-	 //    }
+		for (int i = current; i <= burst; i++) {
+			p->current = i; // update current progress for the program
+
+			sleep(1);
+			time++;
+			printf("slept for %d/%ds\n", time, burst);
+		}
+
+		printf("output: %s\n", output);
 
 		// _____________________________send back to client
 		dup2(1, STDOUT_FILENO); // restore default fd
 
 		// // _____________________________send client socket the output of command // apply DELAY here
 		// for (int i = current; i <= burst; i++) {
-		send(s, output, sizeof(output), 0); // not sure if this will work ?
+		// send(s, output, sizeof(output), 0); // not sure if this will work ?
 		// }
 		// //// _____________________________
 
@@ -337,17 +338,14 @@ int execute_program(struct Program * p){
 		// }
 	}
 
+	p->current = burst; // program finished executing
+
+	// release semaphore
 	sem_post(sem_wq);
-	sem_post(sem_not_running);
-
-	// printf("semaphores released !\n");
-	// printf("execution time: %d\n", time);
-	// printf("burst time: %d\n", burst);
-		// return i;
-
-	// }
-	close(s);
-	*/
+	sem_post(sem_running);
+	printf("semaphores released !\n");
+	
+	// close(s);
 
 	return burst;
 }
@@ -355,10 +353,10 @@ int execute_program(struct Program * p){
 void* scheduler(void * socket, struct Program * p){
 	// reorder list based on the burst time
 	// reorganize the thread 
-	check_for_SJR()
+	check_for_SJR();
 
-	int Q = 3 //quantum
-	int t = 0 //time
+	int Q = 3; //quantum
+	int t = 0; //time
 
 	while(head == NULL)
 	{
@@ -366,15 +364,15 @@ void* scheduler(void * socket, struct Program * p){
 
 		bool flag = true;
 
-		struct node *crrNODE
-		crrNODE = head 				//check(head or p)
+		struct node *crrNODE;
+		crrNODE = head;		//check(head or p)
 
 		for(int i = 0; i < n; i++){
 			if(crrNODE->burst != 0){
 				flag = false;
 				break;
 			}
-			crrNODE = crrNODE->next
+			crrNODE = crrNODE->next;
 		}
 		if(flag)
 			break;
@@ -382,7 +380,7 @@ void* scheduler(void * socket, struct Program * p){
 		for(int i = 0; (i < n) && (head == NULL); i++){
 			int ctr = 0;
 			while((ctr < tq) && (temp_burst[queue[0]-1] > 0)){
-				sleep(1)
+				sleep(1);
 				temp_burst[queue[0]-1] -= 1;
 				timer += 1;
 				ctr++;
@@ -422,14 +420,13 @@ void* scheduler(void * socket, struct Program * p){
 	}
 	
 	// reorganize the thread (maintain sjrf)
-	check_for_SJR()
+	check_for_SJR();
 
 }
 
-void check_for_SJR(void * socket, struct Program * p)
-{
+void check_for_SJR(void * socket, struct Program * p){
 	// inspired by https://www.geeksforgeeks.org/bubble-sort-on-doubly-linked-list/
-	// order list according to buble sort
+	// order list according to bubble sort
 	int swapped;
 	struct node *currentptr = NULL;
   
@@ -521,7 +518,7 @@ void* client_handler(void * socket){
 			// Add current program to waiting queue
 			pid_t tid = pthread_self();
 			// pid_t tid = 0; // instead ised dummy value, we might not need tid afterall
-			int burst = 10;
+			int burst = 3;
 			struct Program *program = create_program(tid, s, burst, pipe_num, args, divided_buffers);
 			LIST_INSERT_HEAD(&waiting_queue, program, pointers);
 
@@ -548,7 +545,7 @@ void* client_handler(void * socket){
 			// Add current program to waiting queue
 			pid_t tid = pthread_self();
 			// pid_t tid = 0; // instead used dummy value, we might not need tid afterall
-			int burst = 10;
+			int burst = 3;
 			struct Program *program = create_program(tid, s, burst, pipe_num, args, divided_buffers);
 			LIST_INSERT_HEAD(&waiting_queue, program, pointers);
 			printf("socket: %d\n", s);
