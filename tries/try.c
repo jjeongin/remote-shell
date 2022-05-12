@@ -45,6 +45,7 @@ void sheduler(int n,/*list of threads*/){
 		for(int i = 0; (i < n) && (queue[i] != 0); i++){
 			int ctr = 0;
 			while((ctr < tq) && (temp_burst[queue[0]-1] > 0)){
+				sleep(1)
 				temp_burst[queue[0]-1] -= 1;
 				timer += 1;
 				ctr++;

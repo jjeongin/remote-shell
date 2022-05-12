@@ -194,12 +194,86 @@ int execute_program(struct Program * p){
 
 void* scheduler(void * socket, struct Program * p){
 	// reorder list based on the burst time
+	// reorganize the thread 
+	check_for_SJR()
 
+	int Q = 3 //quantum
+	int t = 0 //time
+
+	while(head == NULL)
+	{
+		//run code based on rr
+
+		bool flag = true;
+
+		struct node *crrNODE
+		crrNODE = head 				//check(head or p)
+
+		for(int i = 0; i < n; i++){
+			if(crrNODE->burst != 0){
+				flag = false;
+				break;
+			}
+			crrNODE = crrNODE->next
+		}
+		if(flag)
+			break;
+
+		for(int i = 0; (i < n) && (head == NULL); i++){
+			int ctr = 0;
+			while((ctr < tq) && (temp_burst[queue[0]-1] > 0)){
+				sleep(1)
+				temp_burst[queue[0]-1] -= 1;
+				timer += 1;
+				ctr++;
+
+				//Checking and Updating the ready queue until all the processes arrive
+				checkNewArrival(timer, arrival, n, maxProccessIndex, queue);
+			}
+			//If a process is completed then store its exit time
+			//and mark it as completed
+			if((temp_burst[queue[0]-1] == 0) && (complete[queue[0]-1] == false)){
+				//turn array currently stores the completion time
+				turn[queue[0]-1] = timer;	
+				complete[queue[0]-1] = true;
+			}
+			
+			//checks whether or not CPU is idle
+			bool idle = true;
+			if(queue[n-1] == 0){
+				for(int i = 0; i < n && queue[i] != 0; i++){
+					if(complete[queue[i]-1] == false){
+						idle = false;
+					}
+				}
+			}
+			else
+				idle = false;
+
+			if(idle){
+				timer++;
+				checkNewArrival(timer, arrival, n, maxProccessIndex, queue);
+			}
+	
+			//Maintaining the entries of processes
+			//after each premption in the ready Queue
+			queueMaintainence(queue,n);
+		}
+	}
+	
+	// reorganize the thread (maintain sjrf)
+	check_for_SJR()
+
+}
+
+void check_for_SJR(void * socket, struct Program * p)
+{
 	// inspired by https://www.geeksforgeeks.org/bubble-sort-on-doubly-linked-list/
+	// order list according to buble sort
 	int swapped;
-	struct Program *currentptr = NULL;
+	struct node *currentptr = NULL;
   
-	/* Checking for empty list */
+	// empty list?
 	if (head == NULL)
 		return;
   
