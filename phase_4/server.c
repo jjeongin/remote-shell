@@ -342,15 +342,125 @@ void * scheduler(void * socket){
 	sem_post(program_running);
 }
 
-void schedule_waiting_queue(){
-	// current
-	// burst - 
-	// quantum - 3s
-	// general time - current time (in terms of the whole program)
-	// waiting - (execution starting time - arrival time)
-	printf("scheduling ...\n");
-	sleep(5);
+// void schedule_waiting_queue(){
+// 	// current
+// 	// burst - 
+// 	// quantum - 3s
+// 	// general time - current time (in terms of the whole program)
+// 	// waiting - (execution starting time - arrival time)
+// 	printf("scheduling ...\n");
+// 	sleep(5);
+
+// 	// reorganize the thread 
+// 	check_for_SJR()
+
+// 	int Q = 3 //quantum
+// 	int t = 0 //time
+
+// 	while(/*list of threads is not empty*/)
+// 	{
+// 		//run code based on rr
+
+// 		bool flag = true;
+// 		for(int i = 0; i < n; i++){
+// 			if(temp_burst[i] != 0){
+// 				flag = false;
+// 				break;
+// 			}
+// 		}
+// 		if(flag)
+// 			break;
+
+// 		for(int i = 0; (i < n) && (queue[i] != 0); i++){
+// 			int ctr = 0;
+// 			while((ctr < tq) && (temp_burst[queue[0]-1] > 0)){
+// 				sleep(1)
+// 				temp_burst[queue[0]-1] -= 1;
+// 				timer += 1;
+// 				ctr++;
+
+// 				//Checking and Updating the ready queue until all the processes arrive
+// 				checkNewArrival(timer, arrival, n, maxProccessIndex, queue);
+// 			}
+// 			//If a process is completed then store its exit time
+// 			//and mark it as completed
+// 			if((temp_burst[queue[0]-1] == 0) && (complete[queue[0]-1] == false)){
+// 				//turn array currently stores the completion time
+// 				turn[queue[0]-1] = timer;	
+// 				complete[queue[0]-1] = true;
+// 			}
+			
+// 			//checks whether or not CPU is idle
+// 			bool idle = true;
+// 			if(queue[n-1] == 0){
+// 				for(int i = 0; i < n && queue[i] != 0; i++){
+// 					if(complete[queue[i]-1] == false){
+// 						idle = false;
+// 					}
+// 				}
+// 			}
+// 			else
+// 				idle = false;
+
+// 			if(idle){
+// 				timer++;
+// 				checkNewArrival(timer, arrival, n, maxProccessIndex, queue);
+// 			}
+	
+// 			//Maintaining the entries of processes
+// 			//after each premption in the ready Queue
+// 			queueMaintainence(queue,n);
+// 		}
+// 	}
+	
+// 	// reorganize the thread (maintain sjrf)
+// 	check_for_SJR()
+
+// }
+
+void check_for_SJR(int queue[]){ //return list
+
+	// inspired by https://www.sanfoundry.com/c-program-sort-array-ascending-order/
+	// sort the array in ascending order
+   	// while (head != NULL) {
+    //    struct Program *next = LIST_NEXT(head, pointers);
+    //    // free argument list & divided buffers
+    //    free(head);
+    //    head = next;
+   	// }
+		
+	// inspired by https://www.geeksforgeeks.org/bubble-sort-on-doubly-linked-list/
+	// order list according to buble sort
+	int swapped;
+  	struct Program *head = LIST_FIRST(&waiting_queue); // free waiting queue
+  	struct Program *current = LIST_NEXT(head, pointers);
+	struct Program *next = LIST_NEXT(current, pointers);
+
+	// empty list?
+	if (head == NULL)
+		return;
+
+	do
+	{
+		swapped = 0;
+  
+		while (current != NULL)     
+		{
+			if (current->burst > next->burst)
+			{
+				//check if this works
+				struct Program *temp = current;
+				current = next;
+				next = next;
+				swapped = 1;
+			}
+			current = next;
+		}
+	}
+	while (swapped);
+
 }
+
 
 void* client_handler(void * socket){
 	int *sock=(int*)socket;
