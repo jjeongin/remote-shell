@@ -342,74 +342,7 @@ void * scheduler(void * socket){
 	sem_post(program_running);
 }
 
-void schedule_waiting_queue(){
-	// current
-	// burst - 
-	// quantum - 3s
-	// general time - current time (in terms of the whole program)
-	// waiting - (execution starting time - arrival time)
-
-	// possible replace flag by semaphore and busy wait
-	//change burst time to remaining time
-
-	printf("scheduling ...\n");
-	// sleep(5);
-
-	// reorganize the thread 
-	check_for_SJR()
-
-	int Q_time = 3 //quantum time
-	int G_time = 0 //general time
-	struct Program *head = LIST_FIRST(&waiting_queue); // free waiting queue
-
-	while(head != NULL)
-	{
-		//run code based on rr
-		struct Program *current = head; // free waiting queue
-		struct Program *next = LIST_NEXT(current, pointers);
-
-
-		bool flag = true;
-		while(current){
-			// if the process is not complete
-			if(current -> burst != )
-			{
-				// go into the critical state
-				flag = false
-				break;
-			}
-			current = next
-		}
-
-		// wait until an element is added
-		if(flag)
-			break;
-
-		// itterate though the head element until the qm is more than it's current time
-		do{
-			if (next != NULL) //if this is not the last element
-			{
-				int currentTimeProcess = 0;
-				while (currentTimeProcess<Q_time && burst>0)
-				{
-					sleep(1);
-					current->burst -= 1;
-					currentTimeProcess ++;
-					G_time +=1;
-					// check if new process arrived
-				}
-			}
-			// check if the process is complete
-			// if (current->burst == 0)
-			// {
-			// 	// remove from waiting list
-			// }
-
-			check_for_SJR(); //reorganize the list
-		}while(head != NULL);
-}
-
-void check_for_SJR(int queue[]){ //return list
+void check_for_SJR(){ //return list
 
 	// inspired by https://www.geeksforgeeks.org/bubble-sort-on-doubly-linked-list/
 	// order list according to buble sort
@@ -442,6 +375,76 @@ void check_for_SJR(int queue[]){ //return list
 	while (swapped);
 
 }
+
+
+void schedule_waiting_queue(){
+	// current
+	// burst - 
+	// quantum - 3s
+	// general time - current time (in terms of the whole program)
+	// waiting - (execution starting time - arrival time)
+
+	// possible replace flag by semaphore and busy wait
+	//change burst time to remaining time
+
+	printf("scheduling ...\n");
+	// sleep(5);
+
+	// reorganize the thread 
+	check_for_SJR();
+
+	int Q_time = 3; //quantum time
+	int G_time = 0; //general time
+	struct Program *head = LIST_FIRST(&waiting_queue); // free waiting queue
+
+	while(head != NULL)
+	{
+		//run code based on rr
+		struct Program *current = head; // free waiting queue
+		struct Program *next = LIST_NEXT(current, pointers);
+
+
+		bool flag = true;
+		while(current){
+			// if the process is not complete
+			if(current -> burst != 0)
+			{
+				// go into the critical state
+				flag = false;
+				break;
+			}
+			current = next;
+		}
+
+		// wait until an element is added
+		if(flag)
+			break;
+
+		// itterate though the head element until the qm is more than it's current time
+		do{
+			if (next != NULL) //if this is not the last element
+			{
+				int currentTimeProcess = 0;
+				while (currentTimeProcess<Q_time && current->burst>0)
+				{
+					sleep(1);
+					current->burst -= 1;
+					currentTimeProcess ++;
+					G_time +=1;
+					// check if new process arrived
+				}
+			}
+			// check if the process is complete
+			// if (current->burst == 0)
+			// {
+			// 	// remove from waiting list
+			// }
+
+			check_for_SJR(); //reorganize the list
+		}while(head != NULL);
+	}
+}
+
 
 
 void* client_handler(void * socket){
