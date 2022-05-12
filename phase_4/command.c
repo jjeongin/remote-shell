@@ -149,29 +149,10 @@ int execute(char ** args, char ** valid_commands) { // execute the command
 	    }
 	    else if (pid == 0) // child
 	    {
-	  //   	pid_t tid = gettid();
-			// int N = 10; // burst time, dummy value
-			// PCB *pcb = create_PCB(tid, N);
-			// LIST_INSERT_HEAD(&waiting_queue, pcb, pointers); // first in first out
-						
-						
-	  //   	// print process information
-	  //   	int process_id = getpid();
-	  //   	char pid_str[6];   // ex. 34567
-			// sprintf(pid_str, "%d", (int) process_id);
-
-			// char sys[12] = "ps -p ";
-			// strcat(sys, pid_str);
-
-			// printf("sys command: %s\n", sys);
-	  //   	// instead of executing the command, add it to the waiting queue
-	  //   	system(sys); // test
-
-
-	        // if (execvp(args[0], args) < 0) { // execute the command with the given argument list
-	        //     printf("Falied to execute the command.\n"); // error if execution failed
-	        //     exit(1);
-	        // }
+	        if (execvp(args[0], args) < 0) { // execute the command with the given argument list
+	            printf("Falied to execute the command.\n"); // error if execution failed
+	            exit(1);
+	        }
 	        exit(0);
 	    }
 	    else { // parent
