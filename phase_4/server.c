@@ -34,10 +34,13 @@
 #define MAX_ARG_LEN 50 // max length of one argument
 #define COMMANDS 12 // number of possible commands
 
-void* client_handler(void * socket);
-sem_t *sem_wq; // declare semaphore
-sem_t *sem_running;
-sem_t *sem_not_running;
+// GLOBAL VARIABLES
+// sem_t *sem_wq; // declare semaphore
+// sem_t *sem_running;
+// sem_t *sem_not_running;
+
+sem_t *new_client_added;
+sem_t *program_running;
 
 char * valid_commands[COMMANDS] = {"ls", "pwd", "mkdir", "rm", "cat", "find", "echo", "mv", "grep", "clear", "exit", "quit"}; // list of supported commands
 
@@ -112,8 +115,10 @@ struct Program * create_program(pid_t tid, int socket, int burst, int pipe_num, 
 	return p;
 }
 
-void* scheduler(void * socket, struct Program * p);
-void check_for_SJR(void * socket, struct Program * p);
+void* client_handler(void * socket);
+void* scheduler(void * socket);
+void schedule_waiting_queue();
+// void check_for_SJR(void * socket, struct Program * p);
 int execute_program(struct Program * p); // execute each program
 
 LIST_HEAD(head, Program); // create head of the waiting queue (doubly linked list of programs)
@@ -122,25 +127,29 @@ struct head waiting_queue;
 int main()
 {
 	LIST_INIT(&waiting_queue); // initialize waiting queue
-	
+
+	new_client_added = sem_open("/new_client_added", O_CREAT, 0666, 1);
+	program_running = sem_open("/program_running", O_CREAT, 0666, 1);
+
+
 	// sem_unlink(sem_wq);
 	// sem_unlink(sem_running);
 	// sem_unlink(sem_not_running);
 
-	if ((sem_wq = sem_open("/semaphore_wq", O_CREAT, 0666, 1)) == SEM_FAILED) {
-	    perror("sem_open\n");
-	    exit(1);
-	}
+	// if ((sem_wq = sem_open("/semaphore_wq", O_CREAT, 0666, 1)) == SEM_FAILED) {
+	//     perror("sem_open\n");
+	//     exit(1);
+	// }
 
-	if ((sem_running = sem_open("/semaphore_running", O_CREAT, 0666, 1)) == SEM_FAILED) {
-	    perror("sem_open\n");
-	    exit(1);
-	}
+	// if ((sem_running = sem_open("/semaphore_running", O_CREAT, 0666, 1)) == SEM_FAILED) {
+	//     perror("sem_open\n");
+	//     exit(1);
+	// }
 
-	if ((sem_not_running = sem_open("/semaphore_not_running", O_CREAT, 0666, 0)) == SEM_FAILED) {
-	    perror("sem_open\n");
-	    exit(1);
-	}
+	// if ((sem_not_running = sem_open("/semaphore_not_running", O_CREAT, 0666, 0)) == SEM_FAILED) {
+	//     perror("sem_open\n");
+	//     exit(1);
+	// }
 
 	// sem_wq = sem_open("/semaphore_wq", O_CREAT,  0666, 1); // initialize semaphore
 	// int sem_val;
@@ -235,12 +244,10 @@ int main()
    	}
    	LIST_INIT(&waiting_queue);
 
-   	sem_close(sem_wq); // close semaphore
-   	sem_close(sem_running); // close semaphore
-   	sem_close(sem_not_running); // close semaphore
-    sem_unlink("/semaphore_wq");
-    sem_unlink("/semaphore_running");
-    sem_unlink("/semaphore_not_running");
+   	sem_close(new_client_added);
+   	sem_close(program_running);
+   	sem_unlink("/new_client_added");
+    sem_unlink("/program_running");
 
 	close(shell_socket);
 	return 0; 
@@ -259,13 +266,6 @@ int execute_program(struct Program * p){
 	int current = p->current;
 	int burst = p->burst;
 	int time = 0; // counter
-
-
-	printf("semaphore running waiting ...\n");
-	sem_wait(sem_running); // we can use multiple semaphores instead of checking semaphore value (sem_get_value() deprecated in MAC)
-	printf("semaphore wq waiting ...\n");
-	sem_wait(sem_wq);
-	printf("semaphores finished waiting !\n");
 
 	if (pipe_num > 0) {
 		execute_pipes(args, valid_commands, divided_buffers, pipe_num);
@@ -300,12 +300,15 @@ int execute_program(struct Program * p){
 		read(fd[0], output, sizeof(output));
 		close(fd[0]);
 
-		for (int i = current; i <= burst; i++) {
-			p->current = i; // update current progress for the program
+		for (int i = current; i < burst; i++) {
+			sem_wait(program_running);
 
+			p->current = i; // update current progress for the program
 			sleep(1);
 			time++;
 			printf("slept for %d/%ds\n", time, burst);
+
+			sem_post(program_running);
 		}
 
 		printf("output: %s\n", output);
@@ -323,124 +326,30 @@ int execute_program(struct Program * p){
 		// 	break;
 		// }
 	}
-
-	p->current = burst; // program finished executing
-
-	// release semaphore
-	sem_post(sem_wq);
-	sem_post(sem_running);
-	printf("semaphores released !\n");
 	
 	// close(s);
 
 	return burst;
 }
 
-void* scheduler(void * socket, struct Program * p){
-	// reorder list based on the burst time
-	// reorganize the thread 
-	check_for_SJR();
+void * scheduler(void * socket){
+	sem_wait(new_client_added);
+	sem_wait(program_running);
 
-	int Q = 3; //quantum
-	int t = 0; //time
+	schedule_waiting_queue();
 
-	while(head == NULL)
-	{
-		//run code based on rr
-
-		bool flag = true;
-
-		struct node *crrNODE;
-		crrNODE = head;		//check(head or p)
-
-		for(int i = 0; i < n; i++){
-			if(crrNODE->burst != 0){
-				flag = false;
-				break;
-			}
-			crrNODE = crrNODE->next;
-		}
-		if(flag)
-			break;
-
-		for(int i = 0; (i < n) && (head == NULL); i++){
-			int ctr = 0;
-			while((ctr < tq) && (temp_burst[queue[0]-1] > 0)){
-				sleep(1);
-				temp_burst[queue[0]-1] -= 1;
-				timer += 1;
-				ctr++;
-
-				//Checking and Updating the ready queue until all the processes arrive
-				checkNewArrival(timer, arrival, n, maxProccessIndex, queue);
-			}
-			//If a process is completed then store its exit time
-			//and mark it as completed
-			if((temp_burst[queue[0]-1] == 0) && (complete[queue[0]-1] == false)){
-				//turn array currently stores the completion time
-				turn[queue[0]-1] = timer;	
-				complete[queue[0]-1] = true;
-			}
-			
-			//checks whether or not CPU is idle
-			bool idle = true;
-			if(queue[n-1] == 0){
-				for(int i = 0; i < n && queue[i] != 0; i++){
-					if(complete[queue[i]-1] == false){
-						idle = false;
-					}
-				}
-			}
-			else
-				idle = false;
-
-			if(idle){
-				timer++;
-				checkNewArrival(timer, arrival, n, maxProccessIndex, queue);
-			}
-	
-			//Maintaining the entries of processes
-			//after each premption in the ready Queue
-			queueMaintainence(queue,n);
-		}
-	}
-	
-	// reorganize the thread (maintain sjrf)
-	check_for_SJR();
-
+	sem_post(new_client_added);
+	sem_post(program_running);
 }
 
-void check_for_SJR(void * socket, struct Program * p){
-	// inspired by https://www.geeksforgeeks.org/bubble-sort-on-doubly-linked-list/
-	// order list according to bubble sort
-	int swapped;
-	struct node *currentptr = NULL;
-  
-	// empty list?
-	if (head == NULL)
-		return;
-  
-	do
-	{
-		swapped = 0;
-		p = head;
-  
-		while (p->next != currentptr)     
-		{
-			if (p->data > p->next->data)
-			{
-				//check if this works
-				program* temp = p;
-				p = p -> next;
-				p -> next = temp;
-
-				swapped = 1;
-			}
-			p = p->next;
-		}
-		currentptr = p;
-	}
-	while (swapped);
+void schedule_waiting_queue(){
+	// current
+	// burst - 
+	// quantum - 3s
+	// general time - current time (in terms of the whole program)
+	// waiting - (execution starting time - arrival time)
+	printf("scheduling ...\n");
+	sleep(5);
 }
 
 void* client_handler(void * socket){
@@ -497,7 +406,7 @@ void* client_handler(void * socket){
 			
 			// ERROR: Semaphore being stuck in waiting - why ?
 			printf("semaphore waiting ...\n");
-			sem_wait(sem_wq); // lock the semaphore
+			sem_wait(new_client_added); // lock the semaphore
 			printf("semaphore finished waiting !\n");
 
 			// Add current program to waiting queue
@@ -516,7 +425,7 @@ void* client_handler(void * socket){
 				printf("programs in waiting queue divided_buffers[1]: %s\n", p->divided_buffers[1]);
 			}
 
-			sem_post(sem_wq); // release the semaphore
+			sem_post(new_client_added); // release the semaphore
 			printf("semaphore released !\n");
 		}
 		else { // if no pipe
@@ -524,7 +433,7 @@ void* client_handler(void * socket){
 			
 			// ERROR: Semaphore being stuck in waiting - why ?
 			printf("semaphore waiting ...\n");
-			sem_wait(sem_wq); // lock the semaphore
+			sem_wait(new_client_added); // lock the semaphore
 			printf("semaphore finished waiting !\n");
 
 			// Add current program to waiting queue
@@ -542,7 +451,7 @@ void* client_handler(void * socket){
 				printf("programs in waiting queue args[1]: %s\n", p->args[1]);
 			}
 
-			sem_post(sem_wq); // release the semaphore	
+			sem_post(new_client_added); // release the semaphore	
 			printf("semaphore released !\n");		
 		}
 	}
