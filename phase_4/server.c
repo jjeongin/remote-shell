@@ -33,6 +33,7 @@
 #define MAX_ARGS 100 // max number of arguments
 #define MAX_ARG_LEN 50 // max length of one argument
 #define COMMANDS 12 // number of possible commands
+#include <time.h>
 
 // GLOBAL VARIABLES
 // sem_t *sem_wq; // declare semaphore
@@ -305,7 +306,7 @@ void * scheduler(void * socket){
 	sem_wait(program_running);
 
 	// if(!LIST_EMPTY(&waiting_queue)) // to avoid seg fault
-	// 	schedule_waiting_queue();
+		// schedule_waiting_queue();
 
 	sem_post(new_client_added);
 	sem_post(program_running);
@@ -471,7 +472,16 @@ void* client_handler(void * socket){
 
 			// Add current program to waiting queue
 			pid_t tid = pthread_self();
-			int burst = 3;
+			
+			int i, stime;
+			long ltime;
+
+			/* get the current calendar time */
+			ltime = time(NULL);
+			stime = (unsigned) ltime/2;
+			srand(stime);
+			int burst = rand();
+
 			struct Program *program = create_program(tid, burst, pipe_num, args, divided_buffers);
 			LIST_INSERT_HEAD(&waiting_queue, program, pointers);
 
