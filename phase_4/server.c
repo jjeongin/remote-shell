@@ -186,6 +186,7 @@ int main()
 
 		pthread_join(client_thread, NULL); // wait until the program is added to the waiting queue
 		pthread_join(scheduler, NULL); // wait until the programs are scheduled
+		
 		printf("MAIN thread:\n");
 
 		if(!LIST_EMPTY(&waiting_queue)) {
@@ -194,19 +195,17 @@ int main()
 
 			if (first->current == first->burst){  // if program finished being executed
 				LIST_REMOVE(first, pointers);
-				printf("program removed from waiting queue\n");
 			}
 				
 		}
 
 		printf("Main thread executed\n");
-
 	}
 
 	struct Program *head = LIST_FIRST(&waiting_queue); // free waiting queue
    	while (head != NULL) {
        struct Program *next = LIST_NEXT(head, pointers);
-       // free argument list & divided buffers
+       // TO DO ------------ also free argument list & divided buffers !
        free(head);
        head = next;
    	}
@@ -305,15 +304,14 @@ void * scheduler(void * socket){
 	sem_wait(new_client_added);
 	sem_wait(program_running);
 
-	if(!LIST_EMPTY(&waiting_queue)) // to avoid seg fault
-		schedule_waiting_queue();
+	// if(!LIST_EMPTY(&waiting_queue)) // to avoid seg fault
+	// 	schedule_waiting_queue();
 
 	sem_post(new_client_added);
 	sem_post(program_running);
 }
 
 void check_for_SJR(){ //return list
-
 	// inspired by https://www.geeksforgeeks.org/bubble-sort-on-doubly-linked-list/
 	// order list according to buble sort
 	int swapped;
@@ -467,7 +465,6 @@ void* client_handler(void * socket){
 		else if (pipe_num > 0) { // if 1 - 3 pipe exists 
 			divide_buffer(buffer, divided_buffers, pipe_num); // divide buffer and store each command into the divided_buffers array
 			
-			// ERROR: Semaphore being stuck in waiting - why ?
 			printf("semaphore waiting ...\n");
 			sem_wait(new_client_added); // lock the semaphore
 			printf("semaphore finished waiting !\n");
@@ -493,7 +490,6 @@ void* client_handler(void * socket){
 		else { // if no pipe
 			get_argument_list(buffer, args); // divide user input and store each argument into an argument list
 			
-			// ERROR: Semaphore being stuck in waiting - why ?
 			printf("semaphore waiting ...\n");
 			sem_wait(new_client_added); // lock the semaphore
 			printf("semaphore finished waiting !\n");
