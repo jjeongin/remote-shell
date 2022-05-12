@@ -46,7 +46,6 @@ char * valid_commands[COMMANDS] = {"ls", "pwd", "mkdir", "rm", "cat", "find", "e
 
 struct Program {
 	pid_t tid;
-	int socket;
 	int current; // current progress, program is completed when current == burst
 	int burst; // burst time for this program
 
@@ -56,11 +55,10 @@ struct Program {
 	LIST_ENTRY(Program) pointers; // pointers for waiting queue from sys/queue.h
 };
 
-struct Program * create_program(pid_t tid, int socket, int burst, int pipe_num, char ** args, char ** divided_buffers){
+struct Program * create_program(pid_t tid, int burst, int pipe_num, char ** args, char ** divided_buffers){
 	struct Program *p = (struct Program *)malloc(sizeof(struct Program));
 	// struct Program *p = (struct Program *)malloc( sizeof(struct Program) + MAX_ARGS * sizeof(char*) + MAX_ARGS * (MAX_ARG_LEN+1) * sizeof(char) );
 	p->tid = tid;
-	p->socket = socket;
 	p->current = 0;
 	p->burst = burst;
 	p->pipe_num = pipe_num;
@@ -109,7 +107,7 @@ struct Program * create_program(pid_t tid, int socket, int burst, int pipe_num, 
 void* client_handler(void * socket);
 void* scheduler(void * socket);
 void schedule_waiting_queue();
-int execute_program(struct Program * p); // execute each program
+void execute_program(struct Program * p); // execute each program
 
 LIST_HEAD(head, Program); // create head of the waiting queue (doubly linked list of programs)
 struct head waiting_queue;
@@ -225,7 +223,7 @@ int main()
 
 // ----------------------------------------------------------
 
-int execute_program(struct Program * p){
+void execute_program(struct Program * p){
 	char output[MAX_OUTPUT];
 
 	int pipe_num = p->pipe_num;
@@ -300,14 +298,14 @@ int execute_program(struct Program * p){
 	
 	// close(s);
 
-	return burst;
+	// return burst;
 }
 
 void * scheduler(void * socket){
 	sem_wait(new_client_added);
 	sem_wait(program_running);
 
-	if(!LIST_EMPTY(&waiting_queue))
+	if(!LIST_EMPTY(&waiting_queue)) // to avoid seg fault
 		schedule_waiting_queue();
 
 	sem_post(new_client_added);
@@ -477,7 +475,7 @@ void* client_handler(void * socket){
 			// Add current program to waiting queue
 			pid_t tid = pthread_self();
 			int burst = 3;
-			struct Program *program = create_program(tid, s, burst, pipe_num, args, divided_buffers);
+			struct Program *program = create_program(tid, burst, pipe_num, args, divided_buffers);
 			LIST_INSERT_HEAD(&waiting_queue, program, pointers);
 
 			// Print all the elements in waiting queue to check if the program is added correctly
@@ -503,7 +501,7 @@ void* client_handler(void * socket){
 			// Add current program to waiting queue
 			pid_t tid = pthread_self();
 			int burst = 3;
-			struct Program *program = create_program(tid, s, burst, pipe_num, args, divided_buffers);
+			struct Program *program = create_program(tid, burst, pipe_num, args, divided_buffers);
 			LIST_INSERT_HEAD(&waiting_queue, program, pointers);
 
 			// Print all the elements in waiting queue to check if the program is added correctly
@@ -514,14 +512,9 @@ void* client_handler(void * socket){
 			}
 
 			sem_post(new_client_added); // release the semaphore	
-			printf("semaphore released !\n");		
+			printf("semaphore released !\n");	
 		}
 	}
-	
-	// if (strcmp(output, "EXIT") == 0) { // if exit
-	// 	break;
-	// }
-	// }
 
 	//close the sockets
 	close(s);
