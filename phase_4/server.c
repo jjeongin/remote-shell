@@ -342,101 +342,83 @@ void * scheduler(void * socket){
 	sem_post(program_running);
 }
 
-// void schedule_waiting_queue(){
-// 	// current
-// 	// burst - 
-// 	// quantum - 3s
-// 	// general time - current time (in terms of the whole program)
-// 	// waiting - (execution starting time - arrival time)
-// 	printf("scheduling ...\n");
-// 	sleep(5);
+void schedule_waiting_queue(){
+	// current
+	// burst - 
+	// quantum - 3s
+	// general time - current time (in terms of the whole program)
+	// waiting - (execution starting time - arrival time)
 
-// 	// reorganize the thread 
-// 	check_for_SJR()
+	// possible replace flag by semaphore and busy wait
+	//change burst time to remaining time
 
-// 	int Q = 3 //quantum
-// 	int t = 0 //time
+	printf("scheduling ...\n");
+	// sleep(5);
 
-// 	while(/*list of threads is not empty*/)
-// 	{
-// 		//run code based on rr
+	// reorganize the thread 
+	check_for_SJR()
 
-// 		bool flag = true;
-// 		for(int i = 0; i < n; i++){
-// 			if(temp_burst[i] != 0){
-// 				flag = false;
-// 				break;
-// 			}
-// 		}
-// 		if(flag)
-// 			break;
+	int Q_time = 3 //quantum time
+	int G_time = 0 //general time
+	struct Program *head = LIST_FIRST(&waiting_queue); // free waiting queue
 
-// 		for(int i = 0; (i < n) && (queue[i] != 0); i++){
-// 			int ctr = 0;
-// 			while((ctr < tq) && (temp_burst[queue[0]-1] > 0)){
-// 				sleep(1)
-// 				temp_burst[queue[0]-1] -= 1;
-// 				timer += 1;
-// 				ctr++;
+	while(head != NULL)
+	{
+		//run code based on rr
+		struct Program *current = head; // free waiting queue
+		struct Program *next = LIST_NEXT(current, pointers);
 
-// 				//Checking and Updating the ready queue until all the processes arrive
-// 				checkNewArrival(timer, arrival, n, maxProccessIndex, queue);
-// 			}
-// 			//If a process is completed then store its exit time
-// 			//and mark it as completed
-// 			if((temp_burst[queue[0]-1] == 0) && (complete[queue[0]-1] == false)){
-// 				//turn array currently stores the completion time
-// 				turn[queue[0]-1] = timer;	
-// 				complete[queue[0]-1] = true;
-// 			}
-			
-// 			//checks whether or not CPU is idle
-// 			bool idle = true;
-// 			if(queue[n-1] == 0){
-// 				for(int i = 0; i < n && queue[i] != 0; i++){
-// 					if(complete[queue[i]-1] == false){
-// 						idle = false;
-// 					}
-// 				}
-// 			}
-// 			else
-// 				idle = false;
 
-// 			if(idle){
-// 				timer++;
-// 				checkNewArrival(timer, arrival, n, maxProccessIndex, queue);
-// 			}
-	
-// 			//Maintaining the entries of processes
-// 			//after each premption in the ready Queue
-// 			queueMaintainence(queue,n);
-// 		}
-// 	}
-	
-// 	// reorganize the thread (maintain sjrf)
-// 	check_for_SJR()
+		bool flag = true;
+		while(current){
+			// if the process is not complete
+			if(current -> burst != )
+			{
+				// go into the critical state
+				flag = false
+				break;
+			}
+			current = next
+		}
 
-// }
+		// wait until an element is added
+		if(flag)
+			break;
+
+		// itterate though the head element until the qm is more than it's current time
+		do{
+			if (next != NULL) //if this is not the last element
+			{
+				int currentTimeProcess = 0;
+				while (currentTimeProcess<Q_time && burst>0)
+				{
+					sleep(1);
+					current->burst -= 1;
+					currentTimeProcess ++;
+					G_time +=1;
+					// check if new process arrived
+				}
+			}
+			// check if the process is complete
+			// if (current->burst == 0)
+			// {
+			// 	// remove from waiting list
+			// }
+
+			check_for_SJR(); //reorganize the list
+		}while(head != NULL);
+}
 
 void check_for_SJR(int queue[]){ //return list
 
-	// inspired by https://www.sanfoundry.com/c-program-sort-array-ascending-order/
-	// sort the array in ascending order
-   	// while (head != NULL) {
-    //    struct Program *next = LIST_NEXT(head, pointers);
-    //    // free argument list & divided buffers
-    //    free(head);
-    //    head = next;
-   	// }
-		
 	// inspired by https://www.geeksforgeeks.org/bubble-sort-on-doubly-linked-list/
 	// order list according to buble sort
 	int swapped;
   	struct Program *head = LIST_FIRST(&waiting_queue); // free waiting queue
-  	struct Program *current = LIST_NEXT(head, pointers);
+  	struct Program *current = head;
 	struct Program *next = LIST_NEXT(current, pointers);
 
-	// empty list?
+	// is the list empty?
 	if (head == NULL)
 		return;
 
