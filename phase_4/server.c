@@ -76,19 +76,15 @@ struct Program * create_program(pid_t tid, int socket, int burst, int pipe_num, 
 		}
 	}
 
-	// for (int j = 0; j < pipe_num + 1; j++) {
-	// 	p->divided_buffers[j] = malloc((MAX_ARG_LEN+1) * sizeof(char));
-	// }
+	p->divided_buffers = (char **) malloc(MAX_ARGS * sizeof(char*)); // allocate memory for argument list (https://stackoverflow.com/questions/5935933/dynamically-create-an-array-of-strings-with-malloc)
+	for (int i = 0; i < MAX_ARGS; i++) {
+		p->divided_buffers[i] = malloc((MAX_ARG_LEN+1) * sizeof(char));
 
-	// p->divided_buffers = (char **) malloc((pipe_num+1) * sizeof(char*)); // allocate memory for argument list (https://stackoverflow.com/questions/5935933/dynamically-create-an-array-of-strings-with-malloc)
-	// for (int i = 0; i < pipe_num+1; i++) {
-	// 	p->args[i] = malloc((MAX_ARG_LEN+1) * sizeof(char));
-
-	// 	if (p->args == NULL) {
-	// 		perror("Failed to allocate argument list.\n");
-	// 		exit(1);
-	// 	}
-	// }
+		if (p->divided_buffers == NULL) {
+			perror("Failed to allocate argument list.\n");
+			exit(1);
+		}
+	}
 
 	// copy the argument list and divided buffer
 	int i = 0;
@@ -99,18 +95,13 @@ struct Program * create_program(pid_t tid, int socket, int burst, int pipe_num, 
 	}
 	p->args[i] = NULL;
 
-	// memcpy(p->divided_buffers, divided_buffers, sizeof(divided_buffers));
-
-	// for (int j = 0; j < pipe_num + 1; j++) {
-	// 	p->divided_buffers[j] = divided_buffers[j];
-	// }
-	// p->divided_buffers[pipe_num+1] = '\0';
-
-	// int j = 0;
-	// while(divided_buffers[j] != NULL) {
-	// 	strcpy(p->divided_buffers[j], divided_buffers[j]);
-	// 	j++;
-	// }
+	int j = 0;
+	while(divided_buffers[j] != NULL) {
+		strcpy(p->divided_buffers[j], divided_buffers[j]);
+		// printf("Arg %d : \"%s\"\n", i, p->args[i]); // TEST
+		j++;
+	}
+	p->divided_buffers[j] = NULL;
 
 	return p;
 }
@@ -118,7 +109,6 @@ struct Program * create_program(pid_t tid, int socket, int burst, int pipe_num, 
 void* client_handler(void * socket);
 void* scheduler(void * socket);
 void schedule_waiting_queue();
-// void check_for_SJR(void * socket, struct Program * p);
 int execute_program(struct Program * p); // execute each program
 
 LIST_HEAD(head, Program); // create head of the waiting queue (doubly linked list of programs)
@@ -128,32 +118,13 @@ int main()
 {
 	LIST_INIT(&waiting_queue); // initialize waiting queue
 
+	sem_close(new_client_added); // reinitialize in case exited with error
+   	sem_close(program_running);
+   	sem_unlink("/new_client_added");
+    sem_unlink("/program_running");
+
 	new_client_added = sem_open("/new_client_added", O_CREAT, 0666, 1);
 	program_running = sem_open("/program_running", O_CREAT, 0666, 1);
-
-
-	// sem_unlink(sem_wq);
-	// sem_unlink(sem_running);
-	// sem_unlink(sem_not_running);
-
-	// if ((sem_wq = sem_open("/semaphore_wq", O_CREAT, 0666, 1)) == SEM_FAILED) {
-	//     perror("sem_open\n");
-	//     exit(1);
-	// }
-
-	// if ((sem_running = sem_open("/semaphore_running", O_CREAT, 0666, 1)) == SEM_FAILED) {
-	//     perror("sem_open\n");
-	//     exit(1);
-	// }
-
-	// if ((sem_not_running = sem_open("/semaphore_not_running", O_CREAT, 0666, 0)) == SEM_FAILED) {
-	//     perror("sem_open\n");
-	//     exit(1);
-	// }
-
-	// sem_wq = sem_open("/semaphore_wq", O_CREAT,  0666, 1); // initialize semaphore
-	// int sem_val;
-	// printf("semaphore value, %d\n", sem_getvalue(sem_wq, &sem_val));
 
 	// _____________________________socket code pt 1(socket code inspired by the code from lab 7)
 	// create a socket
@@ -219,19 +190,18 @@ int main()
 		pthread_join(scheduler, NULL); // wait until the programs are scheduled
 		printf("MAIN thread:\n");
 
-		struct Program *first = LIST_FIRST(&waiting_queue); // execute program from the top of the waiting queue
-		execute_program(first);
+		if(!LIST_EMPTY(&waiting_queue)) {
+			struct Program *first = LIST_FIRST(&waiting_queue); // execute program from the top of the waiting queue
+			execute_program(first);
 
-		if (first->current == first->burst) // if program finished being executed
-			LIST_REMOVE(first, pointers);
+			if (first->current == first->burst){  // if program finished being executed
+				LIST_REMOVE(first, pointers);
+				printf("program removed from waiting queue\n");
+			}
+				
+		}
 
 		printf("Main thread executed\n");
-
-		// struct Program *p;
-		// LIST_FOREACH(p, &waiting_queue, pointers) {
-		// 	printf("[MAIN] programs in waiting queue args[0]: %s\n", p->args[0]);
-		// 	printf("[MAIN] programs in waiting queue args[1]: %s\n", p->args[1]);
-		// }
 
 	}
 
@@ -257,7 +227,6 @@ int main()
 
 int execute_program(struct Program * p){
 	char output[MAX_OUTPUT];
-	int s = p->socket; // client socket
 
 	int pipe_num = p->pipe_num;
 	char ** args = p->args;
@@ -267,6 +236,17 @@ int execute_program(struct Program * p){
 	int burst = p->burst;
 	int time = 0; // counter
 
+	for (int i = current; i < burst; i++) {
+		sem_wait(program_running);
+
+		p->current = i; // update current progress for the program
+		sleep(1);
+		time++;
+		printf("slept for %d/%ds\n", time, burst);
+
+		sem_post(program_running);
+	}
+
 	if (pipe_num > 0) {
 		execute_pipes(args, valid_commands, divided_buffers, pipe_num);
 	}
@@ -274,58 +254,49 @@ int execute_program(struct Program * p){
 		execute(args, valid_commands);
 	}
 
-	// execute the command and send client socket the output
-	// using pipes to redirect output of exec (https://stackoverflow.com/questions/2605130/redirecting-exec-output-to-a-buffer-or-file)
-	int fd[2];
-	pipe(fd);
-	pid_t pid = fork();
-	if (pid == 0) { // child
-		close(fd[0]); // close reading end
-		dup2(fd[1], STDOUT_FILENO); // send stdout to the pipe
-		dup2(fd[1], STDERR_FILENO); // send stderr to the pipe
-		close(fd[1]);
+	// // execute the command and send client socket the output
+	// // using pipes to redirect output of exec (https://stackoverflow.com/questions/2605130/redirecting-exec-output-to-a-buffer-or-file)
+	// int fd[2];
+	// pipe(fd);
+	// pid_t pid = fork();
+	// if (pid == 0) { // child
+	// 	close(fd[0]); // close reading end
+	// 	dup2(fd[1], STDOUT_FILENO); // send stdout to the pipe
+	// 	dup2(fd[1], STDERR_FILENO); // send stderr to the pipe
+	// 	close(fd[1]);
 
-		if (pipe_num > 0) {
-			execute_pipes(args, valid_commands, divided_buffers, pipe_num);
-		}
-		else {
-			execute(args, valid_commands);
-		}
-		exit(0);
-	}
-	else if (pid > 0) { // parent
-		wait(NULL);
-		close(fd[1]);
-		bzero(output, 1024);
-		read(fd[0], output, sizeof(output));
-		close(fd[0]);
+	// 	if (pipe_num > 0) {
+	// 		execute_pipes(args, valid_commands, divided_buffers, pipe_num);
+	// 	}
+	// 	else {
+	// 		execute(args, valid_commands);
+	// 	}
+	// 	exit(0);
+	// }
+	// else if (pid > 0) { // parent
+	// 	wait(NULL);
+	// 	close(fd[1]);
+	// 	bzero(output, 1024);
+	// 	read(fd[0], output, sizeof(output));
+	// 	close(fd[0]);
 
-		for (int i = current; i < burst; i++) {
-			sem_wait(program_running);
+	// 	for (int i = current; i < burst; i++) {
+	// 		sem_wait(program_running);
 
-			p->current = i; // update current progress for the program
-			sleep(1);
-			time++;
-			printf("slept for %d/%ds\n", time, burst);
+	// 		p->current = i; // update current progress for the program
+	// 		sleep(1);
+	// 		time++;
+	// 		printf("slept for %d/%ds\n", time, burst);
 
-			sem_post(program_running);
-		}
+	// 		sem_post(program_running);
+	// 	}
 
-		printf("output: %s\n", output);
+	// 	printf("output: %s\n", output);
 
-		// _____________________________send back to client
-		dup2(1, STDOUT_FILENO); // restore default fd
+	// 	// _____________________________send back to client
+	// 	dup2(1, STDOUT_FILENO); // restore default fd
 
-		// // _____________________________send client socket the output of command // apply DELAY here
-		// for (int i = current; i <= burst; i++) {
-		// send(s, output, sizeof(output), 0); // not sure if this will work ?
-		// }
-		// //// _____________________________
-
-		// if (strcmp(output, "EXIT") == 0) { // if exit // how can we exit the client now ?
-		// 	break;
-		// }
-	}
+	// }
 	
 	// close(s);
 
@@ -336,7 +307,8 @@ void * scheduler(void * socket){
 	sem_wait(new_client_added);
 	sem_wait(program_running);
 
-	schedule_waiting_queue();
+	if(!LIST_EMPTY(&waiting_queue))
+		schedule_waiting_queue();
 
 	sem_post(new_client_added);
 	sem_post(program_running);
@@ -388,7 +360,6 @@ void schedule_waiting_queue(){
 	//change burst time to remaining time
 
 	printf("scheduling ...\n");
-	// sleep(5);
 
 	// reorganize the thread 
 	check_for_SJR();
@@ -446,7 +417,6 @@ void schedule_waiting_queue(){
 }
 
 
-
 void* client_handler(void * socket){
 	int *sock=(int*)socket;
 	int s=*sock;
@@ -470,10 +440,9 @@ void* client_handler(void * socket){
 	char output[MAX_OUTPUT];
 
 	// _____________________________recieve user input from client socket and store in buffer
-	// while (1) { // repeat
-		bzero(buffer, MAX_BUF);
-		recv(s, &buffer, sizeof(buffer), 0);
-		printf("Buffer received: %s\n", buffer);
+	bzero(buffer, MAX_BUF);
+	recv(s, &buffer, sizeof(buffer), 0);
+	printf("Buffer received: %s\n", buffer);
 	// _____________________________recieve user input from client socket and store in buffer
 	if (is_empty(buffer) == false) // if the buffer is not empty
 	{
@@ -493,6 +462,7 @@ void* client_handler(void * socket){
 		// handle pipes
 		int pipe_num = check_pipes(buffer); // check if there is any pipe and if there is, return the number of pipes
 		char * divided_buffers[pipe_num + 1]; // create a new buffer array for each separate command
+		divided_buffers[0] = NULL; // initialize to avoid segmentation fault
 		if (pipe_num > 3) { // error if more than 3 pipes
 			perror("Only 1 to 3 pipes are supported.\n");
 		}
@@ -506,7 +476,6 @@ void* client_handler(void * socket){
 
 			// Add current program to waiting queue
 			pid_t tid = pthread_self();
-			// pid_t tid = 0; // instead ised dummy value, we might not need tid afterall
 			int burst = 3;
 			struct Program *program = create_program(tid, s, burst, pipe_num, args, divided_buffers);
 			LIST_INSERT_HEAD(&waiting_queue, program, pointers);
@@ -533,11 +502,9 @@ void* client_handler(void * socket){
 
 			// Add current program to waiting queue
 			pid_t tid = pthread_self();
-			// pid_t tid = 0; // instead used dummy value, we might not need tid afterall
 			int burst = 3;
 			struct Program *program = create_program(tid, s, burst, pipe_num, args, divided_buffers);
 			LIST_INSERT_HEAD(&waiting_queue, program, pointers);
-			printf("socket: %d\n", s);
 
 			// Print all the elements in waiting queue to check if the program is added correctly
 			struct Program *p;
