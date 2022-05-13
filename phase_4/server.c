@@ -297,53 +297,53 @@ void schedule_waiting_queue(){
 	sleep(5);
 
 	// ERROR in scheduling ----------------
-	// reorganize the thread 
-	check_for_SJR();
+	// // reorganize the thread 
+	// check_for_SJR();
 
-	int Q_time = 3; //quantum time
-	int G_time = 0; //general time
-	struct Program *head = LIST_FIRST(&waiting_queue); // free waiting queue
+	// int Q_time = 3; //quantum time
+	// int G_time = 0; //general time
+	// struct Program *head = LIST_FIRST(&waiting_queue); // free waiting queue
 
-	while(head != NULL)
-	{
-		//run code based on rr
-		struct Program *current = head; // free waiting queue
-		struct Program *next = LIST_NEXT(current, pointers);
+	// while(head != NULL)
+	// {
+	// 	//run code based on rr
+	// 	struct Program *current = head; // free waiting queue
+	// 	struct Program *next = LIST_NEXT(current, pointers);
 
 
-		bool flag = true;
-		while(current){
-			// if the process is not complete
-			if(current -> burst != 0)
-			{
-				// go into the critical state
-				flag = false;
-				break;
-			}
-			current = next;
-		}
+	// 	bool flag = true;
+	// 	while(current){
+	// 		// if the process is not complete
+	// 		if(current -> burst != 0)
+	// 		{
+	// 			// go into the critical state
+	// 			flag = false;
+	// 			break;
+	// 		}
+	// 		current = next;
+	// 	}
 
-		// wait until an element is added
-		if(flag)
-			break;
+	// 	// wait until an element is added
+	// 	if(flag)
+	// 		break;
 
-		// itterate though the head element until the qm is more than it's current time
-		do{
-			if (next != NULL) //if this is not the last element
-			{
-				int currentTimeProcess = 0;
-				while (currentTimeProcess<Q_time && current->burst>0)
-				{
-					sleep(1);
-					current->burst -= 1;
-					currentTimeProcess ++;
-					G_time +=1;
-				}
-			}
+	// 	// itterate though the head element until the qm is more than it's current time
+	// 	do{
+	// 		if (next != NULL) //if this is not the last element
+	// 		{
+	// 			int currentTimeProcess = 0;
+	// 			while (currentTimeProcess<Q_time && current->burst>0)
+	// 			{
+	// 				sleep(1);
+	// 				current->burst -= 1;
+	// 				currentTimeProcess ++;
+	// 				G_time +=1;
+	// 			}
+	// 		}
 
-			check_for_SJR(); //reorganize the list
-		}while(head != NULL);
-	}
+	// 		check_for_SJR(); //reorganize the list
+	// 	}while(head != NULL);
+	// }
 	printf("scheduled !\n");
 }
 
