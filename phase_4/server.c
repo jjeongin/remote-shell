@@ -35,10 +35,6 @@
 #define COMMANDS 12 // number of possible commands
 
 // GLOBAL VARIABLES
-// sem_t *sem_wq; // declare semaphore
-// sem_t *sem_running;
-// sem_t *sem_not_running;
-
 sem_t *new_client_added;
 sem_t *program_running;
 
@@ -196,7 +192,6 @@ int main()
 			if (first->current == first->burst){  // if program finished being executed
 				LIST_REMOVE(first, pointers);
 			}
-				
 		}
 
 		printf("Main thread executed\n");
@@ -217,7 +212,7 @@ int main()
     sem_unlink("/program_running");
 
 	close(shell_socket);
-	return 0; 
+	return 0;
 }
 
 // ----------------------------------------------------------
@@ -300,6 +295,8 @@ void check_for_SJR(){ //return list
 void schedule_waiting_queue(){
 	printf("scheduling ...\n");
 	sleep(5);
+
+	// ERROR in scheduling ----------------
 	// // reorganize the thread 
 	// check_for_SJR();
 
