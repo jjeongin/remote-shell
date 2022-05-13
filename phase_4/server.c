@@ -33,7 +33,6 @@
 #define MAX_ARGS 100 // max number of arguments
 #define MAX_ARG_LEN 50 // max length of one argument
 #define COMMANDS 12 // number of possible commands
-#include <time.h>
 
 // GLOBAL VARIABLES
 // sem_t *sem_wq; // declare semaphore
@@ -244,6 +243,7 @@ void execute_program(struct Program * p){
 
 		sem_post(program_running);
 	}
+	p->current = p->burst;
 
 	if (pipe_num > 0) {
 		execute_pipes(args, valid_commands, divided_buffers, pipe_num);
@@ -251,62 +251,14 @@ void execute_program(struct Program * p){
 	else {
 		execute(args, valid_commands);
 	}
-
-	// // execute the command and send client socket the output
-	// // using pipes to redirect output of exec (https://stackoverflow.com/questions/2605130/redirecting-exec-output-to-a-buffer-or-file)
-	// int fd[2];
-	// pipe(fd);
-	// pid_t pid = fork();
-	// if (pid == 0) { // child
-	// 	close(fd[0]); // close reading end
-	// 	dup2(fd[1], STDOUT_FILENO); // send stdout to the pipe
-	// 	dup2(fd[1], STDERR_FILENO); // send stderr to the pipe
-	// 	close(fd[1]);
-
-	// 	if (pipe_num > 0) {
-	// 		execute_pipes(args, valid_commands, divided_buffers, pipe_num);
-	// 	}
-	// 	else {
-	// 		execute(args, valid_commands);
-	// 	}
-	// 	exit(0);
-	// }
-	// else if (pid > 0) { // parent
-	// 	wait(NULL);
-	// 	close(fd[1]);
-	// 	bzero(output, 1024);
-	// 	read(fd[0], output, sizeof(output));
-	// 	close(fd[0]);
-
-	// 	for (int i = current; i < burst; i++) {
-	// 		sem_wait(program_running);
-
-	// 		p->current = i; // update current progress for the program
-	// 		sleep(1);
-	// 		time++;
-	// 		printf("slept for %d/%ds\n", time, burst);
-
-	// 		sem_post(program_running);
-	// 	}
-
-	// 	printf("output: %s\n", output);
-
-	// 	// _____________________________send back to client
-	// 	dup2(1, STDOUT_FILENO); // restore default fd
-
-	// }
-	
-	// close(s);
-
-	// return burst;
 }
 
 void * scheduler(void * socket){
 	sem_wait(new_client_added);
 	sem_wait(program_running);
 
-	// if(!LIST_EMPTY(&waiting_queue)) // to avoid seg fault
-		// schedule_waiting_queue();
+	if(!LIST_EMPTY(&waiting_queue))
+		schedule_waiting_queue();
 
 	sem_post(new_client_added);
 	sem_post(program_running);
@@ -342,77 +294,61 @@ void check_for_SJR(){ //return list
 		}
 	}
 	while (swapped);
-
 }
 
 
 void schedule_waiting_queue(){
-	// current
-	// burst - 
-	// quantum - 3s
-	// general time - current time (in terms of the whole program)
-	// waiting - (execution starting time - arrival time)
-
-	// possible replace flag by semaphore and busy wait
-	//change burst time to remaining time
-
 	printf("scheduling ...\n");
+	sleep(5);
+	// // reorganize the thread 
+	// check_for_SJR();
 
-	// reorganize the thread 
-	check_for_SJR();
+	// int Q_time = 3; //quantum time
+	// int G_time = 0; //general time
+	// struct Program *head = LIST_FIRST(&waiting_queue); // free waiting queue
 
-	int Q_time = 3; //quantum time
-	int G_time = 0; //general time
-	struct Program *head = LIST_FIRST(&waiting_queue); // free waiting queue
-
-	while(head != NULL)
-	{
-		//run code based on rr
-		struct Program *current = head; // free waiting queue
-		struct Program *next = LIST_NEXT(current, pointers);
+	// while(head != NULL)
+	// {
+	// 	//run code based on rr
+	// 	struct Program *current = head; // free waiting queue
+	// 	struct Program *next = LIST_NEXT(current, pointers);
 
 
-		bool flag = true;
-		while(current){
-			// if the process is not complete
-			if(current -> burst != 0)
-			{
-				// go into the critical state
-				flag = false;
-				break;
-			}
-			current = next;
-		}
+	// 	bool flag = true;
+	// 	while(current){
+	// 		// if the process is not complete
+	// 		if(current -> burst != 0)
+	// 		{
+	// 			// go into the critical state
+	// 			flag = false;
+	// 			break;
+	// 		}
+	// 		current = next;
+	// 	}
 
-		// wait until an element is added
-		if(flag)
-			break;
+	// 	// wait until an element is added
+	// 	if(flag)
+	// 		break;
 
-		// itterate though the head element until the qm is more than it's current time
-		do{
-			if (next != NULL) //if this is not the last element
-			{
-				int currentTimeProcess = 0;
-				while (currentTimeProcess<Q_time && current->burst>0)
-				{
-					sleep(1);
-					current->burst -= 1;
-					currentTimeProcess ++;
-					G_time +=1;
-					// check if new process arrived
-				}
-			}
-			// check if the process is complete
-			// if (current->burst == 0)
-			// {
-			// 	// remove from waiting list
-			// }
+	// 	// itterate though the head element until the qm is more than it's current time
+	// 	do{
+	// 		if (next != NULL) //if this is not the last element
+	// 		{
+	// 			int currentTimeProcess = 0;
+	// 			while (currentTimeProcess<Q_time && current->burst>0)
+	// 			{
+	// 				sleep(1);
+	// 				current->burst -= 1;
+	// 				currentTimeProcess ++;
+	// 				G_time +=1;
+	// 			}
+	// 		}
 
-			check_for_SJR(); //reorganize the list
-		}while(head != NULL);
-	}
+	// 		check_for_SJR(); //reorganize the list
+	// 	}while(head != NULL);
+	// }
+	printf("scheduled !\n");
 }
-
 
 void* client_handler(void * socket){
 	int *sock=(int*)socket;
@@ -420,7 +356,6 @@ void* client_handler(void * socket){
 
 	// _____________________________executing the commands
 	// allocate memories
-	// char * valid_commands[COMMANDS] = {"ls", "pwd", "mkdir", "rm", "cat", "find", "echo", "mv", "grep", "clear", "exit", "quit"}; // list of supported commands
 	char * filename = (char *) malloc((MAX_ARG_LEN+1) * sizeof(char)); // store filename when I/O redirection
 
 	char ** args = (char **) malloc(MAX_ARGS * sizeof(char*)); // allocate memory for argument list (https://stackoverflow.com/questions/5935933/dynamically-create-an-array-of-strings-with-malloc)
@@ -466,22 +401,13 @@ void* client_handler(void * socket){
 		else if (pipe_num > 0) { // if 1 - 3 pipe exists 
 			divide_buffer(buffer, divided_buffers, pipe_num); // divide buffer and store each command into the divided_buffers array
 			
-			printf("semaphore waiting ...\n");
+			// printf("semaphore waiting ...\n");
 			sem_wait(new_client_added); // lock the semaphore
-			printf("semaphore finished waiting !\n");
+			// printf("semaphore finished waiting !\n");
 
 			// Add current program to waiting queue
 			pid_t tid = pthread_self();
-			
-			int i, stime;
-			long ltime;
-
-			/* get the current calendar time */
-			ltime = time(NULL);
-			stime = (unsigned) ltime/2;
-			srand(stime);
-			int burst = rand();
-
+			int burst = 3;
 			struct Program *program = create_program(tid, burst, pipe_num, args, divided_buffers);
 			LIST_INSERT_HEAD(&waiting_queue, program, pointers);
 
@@ -495,18 +421,27 @@ void* client_handler(void * socket){
 			}
 
 			sem_post(new_client_added); // release the semaphore
-			printf("semaphore released !\n");
+			// printf("semaphore released !\n");
 		}
 		else { // if no pipe
 			get_argument_list(buffer, args); // divide user input and store each argument into an argument list
 			
-			printf("semaphore waiting ...\n");
+			// printf("semaphore waiting ...\n");
 			sem_wait(new_client_added); // lock the semaphore
-			printf("semaphore finished waiting !\n");
+			// printf("semaphore finished waiting !\n");
 
 			// Add current program to waiting queue
 			pid_t tid = pthread_self();
 			int burst = 3;
+
+			// example
+			if (strcmp(args[0], "ls") == 0)
+				burst = 2;
+			else if (strcmp(args[0], "pwd") == 0)
+				burst = 3;
+			else if (strcmp(args[0], "echo") == 0)
+				burst = 4;
+
 			struct Program *program = create_program(tid, burst, pipe_num, args, divided_buffers);
 			LIST_INSERT_HEAD(&waiting_queue, program, pointers);
 
@@ -518,7 +453,7 @@ void* client_handler(void * socket){
 			}
 
 			sem_post(new_client_added); // release the semaphore	
-			printf("semaphore released !\n");	
+			// printf("semaphore released !\n");	
 		}
 	}
 
